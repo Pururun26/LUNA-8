@@ -1,0 +1,8 @@
+cls(1)
+print("HELLO LUNA-8",   8,  8, 12)
+print("3X4 FONT",       8, 16,  4)
+print("F11 FULLSCREEN", 8, 24, 11)
+print("abcdef",         8, 32,  5)
+print(42,               8, 40,  7)
+print(true,             8, 48, 13)
+print("LINE1\nLINE2",   8, 60, 10)

@@ -1,0 +1,8 @@
+frame = 0
+
+function update()
+    cls(1)
+    print("FRAME " .. frame, 4, 4, 12)
+    pset(frame % 128, 64, 11)
+    frame = frame + 1
+end
