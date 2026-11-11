@@ -1,1 +1,0 @@
- liblua_static.a "C:/home/pururun/DevConsole/LUNA-8/raylib/raylib-6.0_win64_mingw-w64/lib/libraylib.a" -lopengl32 -lgdi32 -lwinmm -luser32 -lshell32 -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 

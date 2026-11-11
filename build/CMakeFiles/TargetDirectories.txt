@@ -1,4 +1,0 @@
-C:/home/pururun/DevConsole/LUNA-8/build/CMakeFiles/lua_static.dir
-C:/home/pururun/DevConsole/LUNA-8/build/CMakeFiles/luna8.dir
-C:/home/pururun/DevConsole/LUNA-8/build/CMakeFiles/edit_cache.dir
-C:/home/pururun/DevConsole/LUNA-8/build/CMakeFiles/rebuild_cache.dir
