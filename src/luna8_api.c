@@ -1,6 +1,7 @@
 // luna8_api.c
 #include "luna8_api.h"
 #include "luna8_font3x4.h"
+#include "luna8_save.h"
 #include "raylib.h"
 
 #include <string.h>
@@ -278,4 +279,136 @@ int64_t luna8_time(void) {
 
 int64_t luna8_utime(void) {
     return (int64_t)time(NULL);
+}
+
+
+/* --- audio --- */
+
+typedef struct {
+    Sound sound;
+    int   ready;
+} ToneChannel;
+
+static ToneChannel g_channels[TONE_CHANNELS];
+static short       g_buffer[TONE_MAX_SAMPLES];   /* один на всё, 176 КБ */
+static int         g_audio_ready = 0;
+static int         g_seeded      = 0;
+
+void luna8_audio_init(void) {
+    InitAudioDevice();
+    g_audio_ready = IsAudioDeviceReady();
+}
+
+void luna8_audio_close(void) {
+    for (int i = 0; i < TONE_CHANNELS; i++) {
+        if (g_channels[i].ready) {
+            StopSound(g_channels[i].sound);
+            UnloadSound(g_channels[i].sound);
+            g_channels[i].ready = 0;
+        }
+    }
+    if (g_audio_ready) CloseAudioDevice();
+    g_audio_ready = 0;
+}
+
+static float env(int i, int n) {
+    if (i < TONE_FADE)       return (float)i / TONE_FADE;
+    if (i >= n - TONE_FADE)  return (float)(n - i) / TONE_FADE;
+    return 1.0f;
+}
+
+static void gen_pulse(short *s, int n, float freq, float vol, float duty) {
+    float high  = 1.0f;
+    float low   = -duty / (1.0f - duty);   /* DC = 0 */
+    float inc   = freq / (float)TONE_SAMPLE_RATE;
+    float gain  = vol / 100.0f * 32767.0f;
+    float phase = 0.0f;
+    for (int i = 0; i < n; i++) {
+        float v = (phase < duty) ? high : low;
+        s[i] = (short)(v * env(i, n) * gain);
+        phase += inc;
+        if (phase >= 1.0f) phase -= 1.0f;
+    }
+}
+
+static void gen_triangle(short *s, int n, float freq, float vol) {
+    float inc   = freq / (float)TONE_SAMPLE_RATE;
+    float gain  = vol / 100.0f * 32767.0f;
+    float phase = 0.0f;
+    for (int i = 0; i < n; i++) {
+        float v = 2.0f * fabsf(2.0f * phase - 1.0f) - 1.0f;
+        s[i] = (short)(v * env(i, n) * gain);
+        phase += inc;
+        if (phase >= 1.0f) phase -= 1.0f;
+    }
+}
+
+static void gen_noise(short *s, int n, float vol) {
+    float gain = vol / 100.0f * 32767.0f;
+    for (int i = 0; i < n; i++) {
+        float v = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+        s[i] = (short)(v * env(i, n) * gain);
+    }
+}
+
+void luna8_tone(int frequency, int duration, int volume, int channel) {
+    if (channel < 0 || channel >= TONE_CHANNELS) return;
+    if (!g_audio_ready) return;
+    if (volume < 0)   volume = 0;
+    if (volume > 100) volume = 100;
+
+    ToneChannel* ch = &g_channels[channel];
+
+    /* freq/vol/dur <= 0 — стоп канала */
+    if (frequency <= 0 || volume <= 0 || duration <= 0) {
+        if (ch->ready) {
+            StopSound(ch->sound);
+            UnloadSound(ch->sound);
+            ch->ready = 0;
+        }
+        return;
+    }
+
+    if (!g_seeded) { srand((unsigned)time(NULL)); g_seeded = 1; }
+
+    int n = (int)((float)TONE_SAMPLE_RATE * (duration / 60.0f));
+    if (n > TONE_MAX_SAMPLES) n = TONE_MAX_SAMPLES;
+    if (n < 2 * TONE_FADE) return;
+
+    switch (channel) {
+        case 0: gen_pulse(g_buffer, n, (float)frequency, (float)volume, 0.125f); break;
+        case 1: gen_pulse(g_buffer, n, (float)frequency, (float)volume, 0.250f); break;
+        case 2: gen_triangle(g_buffer, n, (float)frequency, (float)volume);      break;
+        case 3: gen_noise(g_buffer, n, (float)volume);                           break;
+    }
+
+    /* точная длина n — как в старом коде, без UpdateSound */
+    Wave wave = {
+        .frameCount = (unsigned int)n,
+        .sampleRate = TONE_SAMPLE_RATE,
+        .sampleSize = 16,
+        .channels   = 1,
+        .data       = g_buffer,
+    };
+    Sound s = LoadSoundFromWave(wave);
+    if (s.frameCount == 0) return;
+
+    if (ch->ready) {
+        StopSound(ch->sound);
+        UnloadSound(ch->sound);
+    }
+    ch->sound = s;
+    ch->ready = 1;
+    PlaySound(s);
+}
+
+
+/* --- save --- */
+
+void luna8_dset(int slot, int64_t value) {
+    luna8_save_dset(slot, value);
+}
+
+int64_t luna8_dget(int slot) {
+    return luna8_save_dget(slot);
 }

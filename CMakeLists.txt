@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(LUNA8 VERSION 0.6.0 LANGUAGES C CXX)
+project(LUNA8 VERSION 0.9.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -54,6 +54,7 @@ add_executable(luna8
     src/luna8_api.c
     src/luna8_api_lua.c
     src/luna8_script.c
+    src/luna8_save.c
 )
 target_include_directories(luna8 PRIVATE src)
 target_link_libraries(luna8 PRIVATE lua_static raylib)

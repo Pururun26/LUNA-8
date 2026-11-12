@@ -7,6 +7,7 @@
 #include "luna8_conf.h"
 #include "luna8_api.h"
 #include "luna8_script.h"
+#include "luna8_save.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -77,7 +78,7 @@ static int build_default_script(char* buf, size_t buf_size) {
 int main(int argc, char** argv) {
     printf("LUNA-8: starting\n");
 
-    /* палитра + fb ДО загрузки скрипта */
+    // палитра + fb ДО загрузки скрипта
     luna8_api_init();
 
     lua_State* L = luna8_script_create();
@@ -108,7 +109,11 @@ int main(int argc, char** argv) {
     }
     printf("LUNA-8: script = %s\n", script);
 
+    // загружаем save до скрипта
+    luna8_save_open(script);
+
     if (luna8_script_load(L, script) != 0) {
+        luna8_save_close();
         lua_close(L);
         return 1;
     }
@@ -120,6 +125,7 @@ int main(int argc, char** argv) {
 
     if (!has_luna) {
         printf("LUNA-8: no luna() in script, exiting.\n");
+        luna8_save_close();
         lua_close(L);
         return 0;
     }
@@ -131,11 +137,15 @@ int main(int argc, char** argv) {
     SetTargetFPS(FPS);
     SetWindowMinSize(SCREEN_W, SCREEN_H);
 
+    luna8_audio_init();
+
     Image img = GenImageColor(SCREEN_W, SCREEN_H, BLACK);
     Texture2D tex = LoadTextureFromImage(img);
     UnloadImage(img);
     if (!IsTextureValid(tex)) {
         fprintf(stderr, "[LUNA-8] cannot create texture\n");
+        luna8_save_close();
+        luna8_audio_close();
         lua_close(L);
         CloseWindow();
         return 1;
@@ -157,7 +167,9 @@ int main(int argc, char** argv) {
         EndDrawing();
     }
 
+    luna8_audio_close();
     lua_close(L);
+    luna8_save_close();
     UnloadTexture(tex);
     CloseWindow();
     return 0;

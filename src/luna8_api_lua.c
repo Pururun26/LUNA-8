@@ -123,6 +123,30 @@ static int l_utime(lua_State* L) {
 }
 
 
+static int l_tone(lua_State* L) {
+    int freq = (int)luaL_checkinteger(L, 1);
+    int dur  = (int)luaL_optinteger(L, 2, 15);
+    int vol  = (int)luaL_optinteger(L, 3, 30);
+    int ch   = (int)luaL_optinteger(L, 4, 0);
+    luna8_tone(freq, dur, vol, ch);
+    return 0;
+}
+
+
+static int l_dset(lua_State* L) {
+    int slot = (int)luaL_checkinteger(L, 1);
+    lua_Integer v = luaL_checkinteger(L, 2);
+    luna8_dset(slot, (int64_t)v);
+    return 0;
+}
+
+static int l_dget(lua_State* L) {
+    int slot = (int)luaL_checkinteger(L, 1);
+    lua_pushinteger(L, (lua_Integer)luna8_dget(slot));
+    return 1;
+}
+
+
 void luna8_register_api(lua_State *L) {
     lua_register(L, "cls",     l_cls);
     lua_register(L, "pset",    l_pset);
@@ -138,4 +162,7 @@ void luna8_register_api(lua_State *L) {
     lua_register(L, "spr",     l_spr);
     lua_register(L, "time",    l_time);
     lua_register(L, "utime",   l_utime);
+    lua_register(L, "tone",    l_tone);
+    lua_register(L, "dset",    l_dset);
+    lua_register(L, "dget",    l_dget);
 }

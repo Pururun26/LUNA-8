@@ -20,19 +20,30 @@
             justify-content: center;
             align-items: center;
         }
-        canvas.emscripten, #canvas {
+
+        /* Контейнер держит пропорции 4:3 (160x120) */
+        #game-wrap {
+            position: relative;
+            width: min(100vw, calc(100vh * 4 / 3));
+            aspect-ratio: 4 / 3;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* Canvas заполняет контейнер, побеждая inline-стили raylib */
+        #canvas {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             display: block;
             border: 0px none;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             cursor: none;
             outline: none;
-            /* 160x90 = 16:9, масштабируем под viewport без искажений */
-            width: min(960px, 95vw, calc(95vh * 16 / 9)) !important;
-            height: auto !important;
-            aspect-ratio: 16 / 9;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
+
         #status {
             position: absolute;
             top: 50%;
@@ -58,7 +69,9 @@
     </style>
 </head>
 <body>
-    <canvas id="canvas" class="emscripten" oncontextmenu="event.preventDefault()"></canvas>
+    <div id="game-wrap">
+        <canvas id="canvas" class="emscripten" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
     <div id="status">Загрузка LUNA-8...</div>
 
     <script>
@@ -69,7 +82,6 @@
                 const ok = await loadGame();
                 if (!ok) return;
                 document.getElementById('status').classList.add('hidden');
-                /* argv[1] = "/game.lua" — main() прочитает через luaL_loadfile */
                 Module.callMain(['/game.lua']);
             }
         };
@@ -102,7 +114,6 @@
             }
         }
 
-        /* Разблокировка звука после первого клика — понадобится когда добавим аудио */
         document.addEventListener('click', function() {
             const audioCtx = (Module.SDL2 && Module.SDL2.audioContext)
                           || (Module.webaudio && Module.webaudio.audioContext)

@@ -32,3 +32,10 @@ void luna8_spr(int id, int x, int y, int flip_x, int flip_y, int colorkey);
 void    luna8_time_reset(void);
 int64_t luna8_time(void);       /* мс с момента init */
 int64_t luna8_utime(void);      /* unix timestamp, секунды */
+
+void luna8_audio_init(void);
+void luna8_audio_close(void);
+void luna8_tone(int frequency, int duration, int volume, int channel);
+
+void    luna8_dset(int slot, int64_t value);
+int64_t luna8_dget(int slot);
