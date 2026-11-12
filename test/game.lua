@@ -1,4 +1,4 @@
 function luna()
-    cls(4)
-    pset(0, 0, 7)
+    cls()
+    text("HELLO LUNA-8", 1, 1)
 end

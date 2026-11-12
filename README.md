@@ -109,14 +109,14 @@ Auto-saved on change. Storage: `save/<cart>.bin` next to exe (native) or `localS
 
 ## Palette
 
-Default palette is **SOBEACHY8**:
+Default palette is a classic 8-color RGB:
 
-| # | Hex | # | Hex |
-|---|---|---|---|
-| 0 | `#E55388` | 4 | `#E3D5CC` |
-| 1 | `#E57D88` | 5 | `#BAD5CC` |
-| 2 | `#E59F88` | 6 | `#6DD5CC` |
-| 3 | `#E5D988` | 7 | `#5AC5CC` |
+| # | Color | Hex | # | Color | Hex |
+|---|---|---|---|---|---|
+| 0 | black   | `#000000` | 4 | cyan    | `#00FFFF` |
+| 1 | red     | `#FF0000` | 5 | magenta | `#FF00FF` |
+| 2 | green   | `#00FF00` | 6 | yellow  | `#FFFF00` |
+| 3 | blue    | `#0000FF` | 7 | white   | `#FFFFFF` |
 
 Change any color at runtime with `pal(i, 0xRRGGBB)`.
 

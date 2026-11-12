@@ -12,14 +12,20 @@
 uint8_t  luna8_fb[SCREEN_W * SCREEN_H];
 uint32_t luna8_palette[PALETTE_SIZE];
 
-static const uint32_t SOBEACHY8[PALETTE_SIZE] = {
-    0xE55388, 0xE57D88, 0xE59F88, 0xE5D988,
-    0xE3D5CC, 0xBAD5CC, 0x6DD5CC, 0x5AC5CC,
+static const uint32_t DEFAULT_PALETTE[PALETTE_SIZE] = {
+    0x000000,  /* 0 black   */
+    0xFF0000,  /* 1 red     */
+    0x00FF00,  /* 2 green   */
+    0x0000FF,  /* 3 blue    */
+    0x00FFFF,  /* 4 cyan    */
+    0xFF00FF,  /* 5 magenta */
+    0xFFFF00,  /* 6 yellow  */
+    0xFFFFFF,  /* 7 white   */
 };
 
 void luna8_api_init(void) {
     for (int i = 0; i < PALETTE_SIZE; i++)
-        luna8_palette[i] = SOBEACHY8[i];
+        luna8_palette[i] = DEFAULT_PALETTE[i];
     memset(luna8_fb, 0, sizeof(luna8_fb));
     luna8_time_reset();
 }
