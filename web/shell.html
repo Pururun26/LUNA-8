@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="data:,">
+    <title>LUNA-8</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            font-family: monospace;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas.emscripten, #canvas {
+            display: block;
+            border: 0px none;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            cursor: none;
+            outline: none;
+            /* 160x90 = 16:9, масштабируем под viewport без искажений */
+            width: min(960px, 95vw, calc(95vh * 16 / 9)) !important;
+            height: auto !important;
+            aspect-ratio: 16 / 9;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        #status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #9ead86;
+            font-size: 18px;
+            text-align: center;
+            pointer-events: none;
+            background: #111;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            z-index: 10;
+        }
+        #status.hidden { display: none; }
+        #status.error {
+            color: #ff6b6b;
+            border-color: #ff6b6b;
+            max-width: 80%;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" class="emscripten" oncontextmenu="event.preventDefault()"></canvas>
+    <div id="status">Загрузка LUNA-8...</div>
+
+    <script>
+        var Module = {
+            noInitialRun: true,
+            canvas: document.getElementById('canvas'),
+            onRuntimeInitialized: async function() {
+                const ok = await loadGame();
+                if (!ok) return;
+                document.getElementById('status').classList.add('hidden');
+                /* argv[1] = "/game.lua" — main() прочитает через luaL_loadfile */
+                Module.callMain(['/game.lua']);
+            }
+        };
+
+        function setStatus(text, isError) {
+            const el = document.getElementById('status');
+            el.textContent = text;
+            if (isError) {
+                el.classList.add('error');
+                el.classList.remove('hidden');
+            }
+        }
+
+        async function loadGame() {
+            try {
+                setStatus('Загрузка game.lua...');
+                const resp = await fetch('game.lua');
+                if (!resp.ok) {
+                    setStatus('game.lua не найден (' + resp.status + '). Положите его рядом с index.html.', true);
+                    return false;
+                }
+                const src = await resp.text();
+                FS.writeFile('/game.lua', src);
+                console.log('[LUNA-8] game.lua загружен:', src.length, 'байт');
+                return true;
+            } catch (e) {
+                console.error('[LUNA-8] Ошибка загрузки:', e);
+                setStatus('Ошибка загрузки: ' + e.message, true);
+                return false;
+            }
+        }
+
+        /* Разблокировка звука после первого клика — понадобится когда добавим аудио */
+        document.addEventListener('click', function() {
+            const audioCtx = (Module.SDL2 && Module.SDL2.audioContext)
+                          || (Module.webaudio && Module.webaudio.audioContext)
+                          || (Module.miniaudio && Module.miniaudio.context);
+            if (audioCtx) audioCtx.resume();
+        }, { once: true });
+    </script>
+
+    {{{ SCRIPT }}}
+</body>
+</html>

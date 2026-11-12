@@ -1,5 +1,4 @@
-print("Hello World")
-
 function luna()
-    -- пока пусто; сюда позже придёт cls(), pset(), spr() и т.д.
+    cls(4)
+    pset(0, 0, 7)
 end

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(LUNA8 VERSION 0.1.0 LANGUAGES C CXX)
+project(LUNA8 VERSION 0.6.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -20,25 +20,54 @@ list(TRANSFORM LUA_SOURCES PREPEND "${LUA_SRC_DIR}/")
 
 add_library(lua_static STATIC ${LUA_SOURCES})
 target_include_directories(lua_static PUBLIC "${LUA_SRC_DIR}")
-target_compile_definitions(lua_static PRIVATE LUA_USE_WINDOWS)
 target_compile_options(lua_static PRIVATE -w)
 
-# ---------- raylib (prebuilt) ----------
-set(RAYLIB_DIR ${CMAKE_SOURCE_DIR}/raylib/raylib-6.0_win64_mingw-w64)
+if(NOT EMSCRIPTEN)
+    target_compile_definitions(lua_static PRIVATE LUA_USE_WINDOWS)
+endif()
+
+# ---------- raylib: native или wasm ----------
+if(EMSCRIPTEN)
+    set(RAYLIB_DIR ${CMAKE_SOURCE_DIR}/raylib/raylib-6.0_webassembly)
+    set(RAYLIB_LIB "${RAYLIB_DIR}/lib/libraylib.web.a")
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")   # → index.html + index.wasm
+else()
+    set(RAYLIB_DIR ${CMAKE_SOURCE_DIR}/raylib/raylib-6.0_win64_mingw-w64)
+    set(RAYLIB_LIB "${RAYLIB_DIR}/lib/libraylib.a")
+endif()
+
 add_library(raylib STATIC IMPORTED)
 set_target_properties(raylib PROPERTIES
-    IMPORTED_LOCATION             "${RAYLIB_DIR}/lib/libraylib.a"
+    IMPORTED_LOCATION             "${RAYLIB_LIB}"
     INTERFACE_INCLUDE_DIRECTORIES "${RAYLIB_DIR}/include"
 )
-target_link_libraries(raylib INTERFACE
-    opengl32 gdi32 winmm user32 shell32
-)
+
+if(NOT EMSCRIPTEN)
+    target_link_libraries(raylib INTERFACE
+        opengl32 gdi32 winmm user32 shell32
+    )
+endif()
 
 # ---------- executable ----------
-add_executable(luna8 src/luna8.c)
+add_executable(luna8
+    src/luna8.c
+    src/luna8_api.c
+    src/luna8_api_lua.c
+    src/luna8_script.c
+)
 target_include_directories(luna8 PRIVATE src)
 target_link_libraries(luna8 PRIVATE lua_static raylib)
 
-if(MINGW)
+if(EMSCRIPTEN)
+    set_target_properties(luna8 PROPERTIES OUTPUT_NAME "index")
+    target_link_options(luna8 PRIVATE
+        -sUSE_GLFW=3
+        -sALLOW_MEMORY_GROWTH=1
+        -sASYNCIFY
+        -sASYNCIFY_STACK_SIZE=16384
+        "-sEXPORTED_RUNTIME_METHODS=['callMain']"
+        --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html
+    )
+elseif(MINGW)
     target_link_options(luna8 PRIVATE -static-libgcc -static-libstdc++)
 endif()

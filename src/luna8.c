@@ -1,74 +1,69 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "raylib.h"
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
 
 #include "luna8_conf.h"
+#include "luna8_api.h"
+#include "luna8_script.h"
 
-/* --- traceback handler ---
-   Вызывается lua_pcall при ошибке. Кладёт на стек строку
-   с сообщением и стеком вызовов Lua. */
-static int msgh(lua_State* L) {
-    const char* msg = lua_tostring(L, 1);
-    if (msg == NULL) {
-        /* error() мог получить таблицу/число — пробуем __tostring */
-        if (luaL_callmeta(L, 1, "__tostring") && lua_type(L, -1) == LUA_TSTRING) {
-            return 1;
-        }
-        msg = lua_pushfstring(L, "(error object is a %s value)",
-                              luaL_typename(L, 1));
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+/* Синхронный XHR: читает URL, возвращает malloc-строку или NULL. */
+EM_JS(char*, luna8_fetch_sync, (const char* url), {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', UTF8ToString(url), false);
+    try { xhr.send(null); } catch (e) { return 0; }
+    if (xhr.status !== 200) return 0;
+    const text = xhr.responseText;
+    const len = lengthBytesUTF8(text) + 1;
+    const ptr = _malloc(len);
+    stringToUTF8(text, ptr, len);
+    return ptr;
+});
+#endif
+
+/* Временный RGBA-буфер: сюда разворачиваем fb[] по палитре
+   перед отправкой в UpdateTexture. */
+static Color pixels[SCREEN_W * SCREEN_H];
+
+static void present(Texture2D *tex) {
+    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) {
+        uint32_t rgb = luna8_palette[luna8_fb[i]];
+        pixels[i].r = (rgb >> 16) & 0xFF;
+        pixels[i].g = (rgb >>  8) & 0xFF;
+        pixels[i].b =  rgb        & 0xFF;
+        pixels[i].a = 255;
     }
-    luaL_traceback(L, L, msg, 1);
-    return 1;
+    UpdateTexture(*tex, pixels);
 }
 
-/* Безопасно печатает ошибку с верхушки стека и снимает её.
-   Не падает, если lua_tostring вернул NULL. */
-static void report_lua_error(lua_State* L, const char* where) {
-    const char* msg = lua_tostring(L, -1);
-    fprintf(stderr, "[lua] %s: %s\n", where, msg ? msg : "(non-string error)");
-    lua_pop(L, 1);
+/* Integer-scale + центрирование: пиксель-перфект при любом размере окна.
+   Полосы вокруг закрашиваются чёрным, иначе виден мусор прошлого кадра. */
+static void draw_pixel_perfect(Texture2D *tex) {
+    int sw = GetScreenWidth();
+    int sh = GetScreenHeight();
+
+    int s = sw / SCREEN_W;
+    int sy = sh / SCREEN_H;
+    if (sy < s) s = sy;
+    if (s < 1) s = 1;
+
+    int dw = SCREEN_W * s;
+    int dh = SCREEN_H * s;
+    int ox = (sw - dw) / 2;
+    int oy = (sh - dh) / 2;
+
+    Rectangle src = { 0.0f, 0.0f, (float)SCREEN_W, (float)SCREEN_H };
+    Rectangle dst = { (float)ox, (float)oy, (float)dw, (float)dh };
+    Vector2   org = { 0.0f, 0.0f };
+
+    ClearBackground(BLACK);
+    DrawTexturePro(*tex, src, dst, org, 0.0f, WHITE);
 }
 
-static void luna_open_libs(lua_State* L) {
-    static const luaL_Reg libs[] = {
-        {LUA_GNAME,       luaopen_base},
-        {LUA_TABLIBNAME,  luaopen_table},
-        {LUA_STRLIBNAME,  luaopen_string},
-        {LUA_MATHLIBNAME, luaopen_math},
-        {LUA_COLIBNAME,   luaopen_coroutine},
-        {NULL, NULL}
-    };
-    for (const luaL_Reg* lib = libs; lib->func; lib++) {
-        luaL_requiref(L, lib->name, lib->func, 1);
-        lua_pop(L, 1);
-    }
-
-    /* --- sandbox ---
-       Убираем файловый доступ и загрузку байткода.
-       io/os/debug/package/utf8 отсутствуют в сборке вообще,
-       а эти функции живут в base/string — снимаем руками. */
-    static const char* banned[] = {
-        "dofile", "loadfile", "load", "loadstring", NULL
-    };
-    for (const char** p = banned; *p; p++) {
-        lua_pushnil(L);
-        lua_setglobal(L, *p);
-    }
-
-    lua_getglobal(L, LUA_STRLIBNAME);
-    if (lua_istable(L, -1)) {
-        lua_pushnil(L);
-        lua_setfield(L, -2, "dump");
-    }
-    lua_pop(L, 1);
-}
-
-/* Склеивает путь game.lua рядом с exe, корректно обрабатывая
-   завершающий '/' или '\'. Возвращает 0 при успехе. */
 static int build_default_script(char* buf, size_t buf_size) {
     const char* app_dir = GetApplicationDirectory();
     size_t dlen = strlen(app_dir);
@@ -78,43 +73,47 @@ static int build_default_script(char* buf, size_t buf_size) {
     return 0;
 }
 
+
 int main(int argc, char** argv) {
-    char default_script[2048];
+    printf("LUNA-8: starting\n");
+
+    /* палитра + fb ДО загрузки скрипта */
+    luna8_api_init();
+
+    lua_State* L = luna8_script_create();
+    if (!L) {
+        fprintf(stderr, "[lua] cannot create state\n");
+        return 1;
+    }
+
     const char* script;
+    char default_script[2048];
 
     if (argc >= 2) {
+        /* native: luna8.exe foo.lua
+           wasm:   callMain(['/game.lua']) → argv[1] = "/game.lua" */
         script = argv[1];
     } else {
+#ifdef __EMSCRIPTEN__
+        /* страховка: shell.html всегда передаёт argv[1], сюда не попадём */
+        script = "/game.lua";
+#else
         if (build_default_script(default_script, sizeof(default_script)) != 0) {
-            fprintf(stderr, "[luna8] script path too long\n");
+            fprintf(stderr, "[LUNA-8] script path too long\n");
+            lua_close(L);
             return 1;
         }
         script = default_script;
+#endif
     }
     printf("LUNA-8: script = %s\n", script);
 
-    lua_State* L = luaL_newstate();
-    if (!L) { fprintf(stderr, "[lua] cannot create state\n"); return 1; }
-    luna_open_libs(L);
-
-    /* loadfile: ошибки компиляции — без стека, msgh не нужен */
-    if (luaL_loadfile(L, script) != LUA_OK) {
-        report_lua_error(L, "load error");
+    if (luna8_script_load(L, script) != 0) {
         lua_close(L);
         return 1;
     }
 
-    /* top-level pcall с msgh для трейсбека */
-    lua_pushcfunction(L, msgh);       /* [chunk][msgh] */
-    lua_insert(L, -2);                /* [msgh][chunk] */
-    if (lua_pcall(L, 0, 0, -2) != LUA_OK) {
-        report_lua_error(L, "runtime error");  /* снимает err, остаётся [msgh] */
-        lua_pop(L, 1);                         /* msgh */
-        lua_close(L);
-        return 1;
-    }
-    lua_pop(L, 1);                             /* msgh */
-
+    /* есть ли luna()? */
     lua_getglobal(L, "luna");
     int has_luna = lua_isfunction(L, -1);
     lua_pop(L, 1);
@@ -126,53 +125,40 @@ int main(int argc, char** argv) {
     }
 
     InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, WINDOW_TITLE);
+#ifndef __EMSCRIPTEN__
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
+#endif
     SetTargetFPS(FPS);
+    SetWindowMinSize(SCREEN_W, SCREEN_H);
 
-    RenderTexture2D target = LoadRenderTexture(SCREEN_W, SCREEN_H);
-    if (!IsRenderTextureValid(target)) {
-        fprintf(stderr, "[luna8] cannot create render target\n");
-        UnloadRenderTexture(target);
+    Image img = GenImageColor(SCREEN_W, SCREEN_H, BLACK);
+    Texture2D tex = LoadTextureFromImage(img);
+    UnloadImage(img);
+    if (!IsTextureValid(tex)) {
+        fprintf(stderr, "[LUNA-8] cannot create texture\n");
         lua_close(L);
         CloseWindow();
         return 1;
     }
-    SetTextureFilter(target.texture, TEXTURE_FILTER_POINT);
+    SetTextureFilter(tex, TEXTURE_FILTER_POINT);
 
     while (!WindowShouldClose()) {
-        int ok = 1;
+#ifndef __EMSCRIPTEN__
+        if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
+#endif
 
-        BeginTextureMode(target);
-            lua_getglobal(L, "luna");
-            if (!lua_isfunction(L, -1)) {
-                fprintf(stderr, "[lua] 'luna' is not a function\n");
-                lua_pop(L, 1);
-                ok = 0;
-            } else {
-                lua_pushcfunction(L, msgh);   /* [f][msgh] */
-                lua_insert(L, -2);            /* [msgh][f] */
-                if (lua_pcall(L, 0, 0, -2) != LUA_OK) {
-                    report_lua_error(L, "error in luna()");
-                    lua_pop(L, 1);            /* msgh */
-                    ok = 0;
-                } else {
-                    lua_pop(L, 1);            /* msgh */
-                }
-            }
-        EndTextureMode();
+        int rc = luna8_script_call(L, "luna");
+        if (rc != 0) break;
 
-        if (!ok) break;
-
-        Rectangle source = { 0.0f, 0.0f, (float)SCREEN_W, -(float)SCREEN_H };
-        Rectangle dest   = { 0.0f, 0.0f, (float)GetScreenWidth(), (float)GetScreenHeight() };
-        Vector2   origin = { 0.0f, 0.0f };
+        present(&tex);
 
         BeginDrawing();
-            DrawTexturePro(target.texture, source, dest, origin, 0.0f, WHITE);
+            draw_pixel_perfect(&tex);
         EndDrawing();
     }
 
     lua_close(L);
-    UnloadRenderTexture(target);
+    UnloadTexture(tex);
     CloseWindow();
     return 0;
 }
