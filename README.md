@@ -125,7 +125,7 @@ Change any color at runtime with `pal(i, 0xRRGGBB)`.
 ## Philosophy
 
 - **Framework, not console.** You write `game.lua`, we run it. No built-in editor, no cartridge format.
-- **Minimal API.** 16 functions total. If something can be expressed with existing ones, we don't add it.
+- **Minimal API.** 18 functions total. If something can be expressed with existing ones, we don't add it.
 - **Sandboxed but not paranoid.** No `io`, `os`, `debug`, `require`, `dofile`, `loadfile`, `load`. Every file goes through the host.
 - **Pixel-perfect by design.** 160×120, integer-scaled, letterboxed. No sub-pixel rendering.
 
