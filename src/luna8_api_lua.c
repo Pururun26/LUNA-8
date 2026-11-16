@@ -57,7 +57,7 @@ static int l_rect(lua_State* L) {
     int w = (int)floor(luaL_checknumber(L, 3));
     int h = (int)floor(luaL_checknumber(L, 4));
     int c = (int)luaL_optnumber(L, 5, 0);
-    int filled = 1;
+    int filled = 0;
     if (!lua_isnoneornil(L, 6)) filled = lua_toboolean(L, 6);
     luna8_rect(x, y, w, h, c, filled);
     return 0;
@@ -69,7 +69,7 @@ static int l_oval(lua_State* L) {
     int w = (int)floor(luaL_checknumber(L, 3));
     int h = (int)floor(luaL_checknumber(L, 4));
     int c = (int)luaL_optnumber(L, 5, 0);
-    int filled = 1;
+    int filled = 0;
     if (!lua_isnoneornil(L, 6)) filled = lua_toboolean(L, 6);
     luna8_oval(x, y, w, h, c, filled);
     return 0;

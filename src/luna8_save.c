@@ -79,10 +79,9 @@ void luna8_save_open(const char *cart_path) {
 
     char dir[1024];
     snprintf(dir, sizeof(dir), "%s%ssave", app, has_sep ? "" : "/");
-    if (!DirectoryExists(dir)) MakeDirectory(dir);
-
     snprintf(g_save_path, sizeof(g_save_path), "%s/%s.bin", dir, base);
 
+    /* грузим только если файл есть — папку не создаём */
     if (FileExists(g_save_path)) {
         int size = 0;
         unsigned char *data = LoadFileData(g_save_path, &size);
@@ -96,7 +95,7 @@ void luna8_save_open(const char *cart_path) {
             UnloadFileData(data);
         }
     } else {
-        TraceLog(LOG_INFO, "LUNA-8 save fresh '%s'", g_save_path);
+        TraceLog(LOG_INFO, "LUNA-8 save: no file, starting fresh");
     }
 #endif
     g_save_ready = 1;
@@ -114,6 +113,17 @@ void luna8_save_dset(int slot, int64_t value) {
 #ifdef __EMSCRIPTEN__
     luna8_ls_save(g_ls_key, g_save, (int)sizeof(g_save));
 #else
+    /* lazy mkdir: создаём папку save/ только когда реально сохраняем */
+    char dir[1024];
+    const char* slash = strrchr(g_save_path, '/');
+    if (slash) {
+        size_t n = (size_t)(slash - g_save_path);
+        if (n < sizeof(dir)) {
+            memcpy(dir, g_save_path, n);
+            dir[n] = '\0';
+            if (!DirectoryExists(dir)) MakeDirectory(dir);
+        }
+    }
     SaveFileData(g_save_path, g_save, sizeof(g_save));
 #endif
 }

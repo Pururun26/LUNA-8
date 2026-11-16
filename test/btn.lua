@@ -7,7 +7,7 @@ local p2x, p2y = 100, 45
 -- Счётчики btnp
 local s1, s2 = 0, 0
 
-function luna()
+function LUNA()
     cls(0)
 
     -- P1 (WASD)

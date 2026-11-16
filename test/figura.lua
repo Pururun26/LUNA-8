@@ -1,6 +1,6 @@
 pal(0, 0x2f2f2f)
 
-function luna()
+function LUNA()
     cls(0)
     line(0, 0, 159, 89, 7)          -- диагональ
     line(159, 0, 0, 89, 3)          -- другая диагональ

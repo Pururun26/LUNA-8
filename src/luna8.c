@@ -1,3 +1,4 @@
+// luna8.c
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -119,12 +120,12 @@ int main(int argc, char** argv) {
     }
 
     /* есть ли luna()? */
-    lua_getglobal(L, "luna");
+    lua_getglobal(L, "LUNA");
     int has_luna = lua_isfunction(L, -1);
     lua_pop(L, 1);
 
     if (!has_luna) {
-        printf("LUNA-8: no luna() in script, exiting.\n");
+        printf("LUNA-8: no LUNA() in script, exiting.\n");
         luna8_save_close();
         lua_close(L);
         return 0;
@@ -157,7 +158,7 @@ int main(int argc, char** argv) {
         if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
 #endif
 
-        int rc = luna8_script_call(L, "luna");
+        int rc = luna8_script_call(L, "LUNA");
         if (rc != 0) break;
 
         present(&tex);

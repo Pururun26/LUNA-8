@@ -6,7 +6,7 @@ local best     = dget(1)
 local counter  = dget(2)
 local playtime = dget(3)
 
-function luna()
+function LUNA()
     cls()
 
     -- счётчик: dset только при изменении (внутри dset уже есть проверка)

@@ -1,6 +1,6 @@
 // luna8_api.c
 #include "luna8_api.h"
-#include "luna8_font3x4.h"
+#include "luna8_font3x5.h"
 #include "luna8_save.h"
 #include "raylib.h"
 
@@ -118,61 +118,39 @@ void luna8_rect(int x, int y, int w, int h, int color, int filled) {
 
 void luna8_oval(int x, int y, int w, int h, int color, int filled) {
     if (w <= 0 || h <= 0) return;
-
-    /* вырожденные и слишком маленькие — рисуем как прямоугольник */
     if (w <= 2 || h <= 2) {
         luna8_rect(x, y, w, h, color, 1);
         return;
     }
 
-    if (filled) {
-        float rx = (w - 1) / 2.0f;
-        float ry = (h - 1) / 2.0f;
-        float cx = x + rx;
+    float rx = w / 2.0f;
+    float ry = h / 2.0f;
+    float cx = x + rx;
+    float cy = y + ry;
 
-        for (int j = 0; j < h; j++) {
-            float dy = (j - ry) / ry;
-            float dy2 = dy * dy;
-            if (dy2 > 1.0f) continue;
-            float dx = sqrtf(1.0f - dy2) * rx;
+    for (int j = 0; j < h; j++) {
+        for (int i = 0; i < w; i++) {
+            float px = x + i + 0.5f;
+            float py = y + j + 0.5f;
+            float dx = (px - cx) / rx;
+            float dy = (py - cy) / ry;
+            float d  = dx * dx + dy * dy;
+            if (d > 1.0f) continue;
 
-            int x0 = (int)(cx - dx + 0.5f);
-            int x1 = (int)(cx + dx + 0.5f);
-
-            if (x0 < x)       x0 = x;
-            if (x1 > x + w - 1) x1 = x + w - 1;
-
-            for (int i = x0; i <= x1; i++)
-                luna8_pset(i, y + j, color);
-        }
-    } else {
-        /* midpoint ellipse (Zingl) */
-        int x0 = x, y0 = y, x1 = x + w - 1, y1 = y + h - 1;
-        long a  = abs(x1 - x0);
-        long b  = abs(y1 - y0);
-        long b1 = b & 1;
-        long dx = 4 * (1 - a) * b * b;
-        long dy = 4 * (b1 + 1) * a * a;
-        long err = dx + dy + b1 * a * a;
-
-        if (x0 > x1) { x0 = x1; x1 += a; }
-        if (y0 > y1) y0 = y1;
-        y0 += (b + 1) / 2;
-        y1 = y0 - b1;
-        a *= 8 * a;
-        b1 = 8 * b * b;
-
-        do {
-            luna8_pset(x1, y0, color); luna8_pset(x0, y0, color);
-            luna8_pset(x0, y1, color); luna8_pset(x1, y1, color);
-            long e2 = 2 * err;
-            if (e2 <= dy) { y0++; y1--; err += dy += a; }
-            if (e2 >= dx || 2 * err > dy) { x0++; x1--; err += dx += b1; }
-        } while (x0 <= x1);
-
-        while (y0 - y1 < b) {
-            luna8_pset(x0 - 1, y0, color); luna8_pset(x1 + 1, y0++, color);
-            luna8_pset(x0 - 1, y1, color); luna8_pset(x1 + 1, y1--, color);
+            int draw = filled;
+            if (!filled) {
+                float dl = ((px - 1) - cx) / rx;
+                float dr = ((px + 1) - cx) / rx;
+                float du = ((py - 1) - cy) / ry;
+                float dd = ((py + 1) - cy) / ry;
+                if (dl * dl + dy * dy > 1.0f ||
+                    dr * dr + dy * dy > 1.0f ||
+                    dx * dx + du * du > 1.0f ||
+                    dx * dx + dd * dd > 1.0f) {
+                    draw = 1;
+                }
+            }
+            if (draw) luna8_pset(x + i, y + j, color);
         }
     }
 }

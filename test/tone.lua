@@ -3,7 +3,7 @@ pal(0, 0x2f2f2f)
 local notes = {262, 330, 392, 523}   -- C E G C
 local idx = 1
 
-function luna()
+function LUNA()
     cls(0)
     text("SPACE = BEEP", 30, 30, 7)
     text("CH 1 = SQUARE", 30, 40, 5)

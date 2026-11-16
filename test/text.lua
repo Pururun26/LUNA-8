@@ -1,6 +1,6 @@
 pal(0, 0x2f2f2f)
 
-function luna()
+function LUNA()
     cls(0)
     text("HELLO LUNA-8", 10, 10, 7)
     text("abcdefghij", 10, 20, 3)              -- апперкейс автоматом

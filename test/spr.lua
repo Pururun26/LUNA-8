@@ -24,7 +24,7 @@ sprdata(2, [[
 00077000
 ]], 8, 8)
 
-function luna()
+function LUNA()
     cls(0)
 
     -- 4 варианта flip
