@@ -16,7 +16,7 @@ Create `game.lua`:
 pal(0, 0x2f2f2f)
 
 local x = 80
-function luna()
+function LUNA()
     cls(0)
     rect(x - 2, 58, 5, 5, 7)
     if btn(0) then x = x - 1 end
@@ -36,7 +36,7 @@ Run:
 -- top-level code runs once at startup
 -- (no raylib calls here — only declarations, dget(), pal(), sprdata())
 
-function luna()
+function LUNA()
     -- called 60 times per second
 end
 ```
