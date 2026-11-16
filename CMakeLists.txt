@@ -68,12 +68,20 @@ elseif(UNIX AND NOT EMSCRIPTEN)
 endif()
 
 # ---------- executable ----------
+if(MINGW)
+    enable_language(RC)
+    set(LUNA8_RESOURCES icon.rc)    # Windows: подключаем .rc
+else()
+    set(LUNA8_RESOURCES)            # Linux/wasm: пусто, ничего не подключаем
+endif()
+
 add_executable(luna8
     src/luna8.c
     src/luna8_api.c
     src/luna8_api_lua.c
     src/luna8_script.c
     src/luna8_save.c
+    ${LUNA8_RESOURCES}
 )
 target_include_directories(luna8 PRIVATE src)
 target_link_libraries(luna8 PRIVATE lua_static raylib)

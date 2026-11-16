@@ -9,6 +9,7 @@
 #include "luna8_api.h"
 #include "luna8_script.h"
 #include "luna8_save.h"
+#include "luna8_icon.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -134,6 +135,16 @@ int main(int argc, char** argv) {
     InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, WINDOW_TITLE);
 #ifndef __EMSCRIPTEN__
     SetWindowState(FLAG_WINDOW_RESIZABLE);
+
+    /* иконка окна — вкомпилирована из luna8_icon.h */
+    Image icon = {
+        .data    = (void*)luna8_icon_rgba,
+        .width   = ICON_W,
+        .height  = ICON_H,
+        .mipmaps = 1,
+        .format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+    };
+    SetWindowIcon(icon);
 #endif
     SetTargetFPS(FPS);
     SetWindowMinSize(SCREEN_W, SCREEN_H);
