@@ -3,7 +3,7 @@
 
 **A tiny retro game framework for Lua.**
 
-160×120 screen, 8-color palette, 4 sound channels, 512 sprites, 64 save slots.
+160×120 screen, 16-color palette, 4 sound channels, 512 sprites, 64 save slots.
 Native + WebAssembly. One `game.lua` file is the whole cartridge.
 
 ---
@@ -13,12 +13,12 @@ Native + WebAssembly. One `game.lua` file is the whole cartridge.
 Create `game.lua`:
 
 ```lua
-pal(0, 0x2f2f2f)
+pal(0, 0x1a0f2e)  -- repaint "black" into dark purple background
 
 local x = 80
 function LUNA()
     cls(0)
-    rect(x - 2, 58, 5, 5, 7)
+    rect(x - 2, 58, 5, 5, 3)
     if btn(0) then x = x - 1 end
     if btn(1) then x = x + 1 end
 end
@@ -53,14 +53,14 @@ That's it. No `_init`, no `_update`, no `_draw`. One function, 60 FPS.
 cls([c=0])                         -- clear screen with color c
 pset(x, y, c)                      -- set pixel
 pget(x, y) -> c                    -- get pixel (0 if out of bounds)
-pal(i, 0xRRGGBB)                   -- set palette color i (0..7)
+pal(i, 0xRRGGBB)                   -- set palette color i (0..15)
 line(x0, y0, x1, y1, c)
 rect(x, y, w, h, c, [filled=true])
 oval(x, y, w, h, c, [filled=true]) -- circle when w == h
-text(s, [x=0], [y=0], [c=7])       -- 3x4 font, uppercase only
+text(s, [x=0], [y=0], [c=3])       -- 3x4 font, uppercase only
 ```
 
-Coordinates accept floats — they are floored. `pset(10.7, 5.2, 7)` draws at `(10, 5)`.
+Coordinates accept floats — they are floored. `pset(10.7, 5.2, 3)` draws at `(10, 5)`.
 
 ### Sprites
 
@@ -69,7 +69,9 @@ sprdata(id, "02200220\n20022002\n...", [w=8], [h=8])
 spr(id, [x=0], [y=0], [flip_x=false], [flip_y=false], [colorkey=-1])
 ```
 
-`id` — 0..511. `w`, `h` — up to 64. Data is a string of `'0'..'7'` digits (palette indices), whitespace ignored. `colorkey` — color index treated as transparent (`-1` = no transparency).
+`id` — 0..511. `w`, `h` — up to 64. Data is a string of **hex digits** `0-9`, `a-f` (or `A-F`), one character per pixel, mapping to palette indices 0..15. Whitespace and any non-hex characters (`\n`, spaces, comments) are ignored. `colorkey` — color index treated as transparent (`-1` = no transparency).
+
+> Index 10 is written `a`, not `10` — one character is exactly one pixel.
 
 ### Input
 
@@ -109,16 +111,20 @@ Auto-saved on change. Storage: `save/<cart>.bin` next to exe (native) or `localS
 
 ## Palette
 
-Default palette is a classic 8-color RGB:
+The default palette is 16 colors: four grays followed by a dark/light pair for each hue.
 
-| # | Color | Hex | # | Color | Hex |
-|---|---|---|---|---|---|
-| 0 | black   | `#000000` | 4 | cyan    | `#00FFFF` |
-| 1 | red     | `#FF0000` | 5 | magenta | `#FF00FF` |
-| 2 | green   | `#00FF00` | 6 | yellow  | `#FFFF00` |
-| 3 | blue    | `#0000FF` | 7 | white   | `#FFFFFF` |
+| # | Color         | Hex       | # | Color         | Hex       |
+|---|---------------|-----------|----|---------------|-----------|
+| 0 | black         | `#000000` | 8 | dark cyan     | `#00AAAA` |
+| 1 | dark gray     | `#555555` | 9 | light cyan    | `#55FFFF` |
+| 2 | light gray    | `#AAAAAA` | a | dark red      | `#AA0000` |
+| 3 | white         | `#FFFFFF` | b | light red     | `#FF5555` |
+| 4 | dark blue     | `#0000AA` | c | dark magenta  | `#AA00AA` |
+| 5 | light blue    | `#5555FF` | d | light magenta | `#FF55FF` |
+| 6 | dark green    | `#00AA00` | e | brown/orange  | `#AA5500` |
+| 7 | light green   | `#55FF55` | f | yellow        | `#FFFF55` |
 
-Change any color at runtime with `pal(i, 0xRRGGBB)`.
+Change any color at runtime with `pal(i, 0xRRGGBB)`, `i` in 0..15. Palette swaps are cheap — sprites store only indices, colors are looked up at draw time, so a single `pal()` call re-tints every sprite on screen.
 
 ---
 

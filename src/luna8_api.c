@@ -13,14 +13,22 @@ uint8_t  luna8_fb[SCREEN_W * SCREEN_H];
 uint32_t luna8_palette[PALETTE_SIZE];
 
 static const uint32_t DEFAULT_PALETTE[PALETTE_SIZE] = {
-    0x000000,  /* 0 black   */
-    0xFF0000,  /* 1 red     */
-    0x00FF00,  /* 2 green   */
-    0x0000FF,  /* 3 blue    */
-    0x00FFFF,  /* 4 cyan    */
-    0xFF00FF,  /* 5 magenta */
-    0xFFFF00,  /* 6 yellow  */
-    0xFFFFFF,  /* 7 white   */
+    0x000000,  /*  0 black        */
+    0x555555,  /*  1 dark gray    */
+    0xAAAAAA,  /*  2 light gray   */
+    0xFFFFFF,  /*  3 white        */
+    0x0000AA,  /*  4 dark blue    */
+    0x5555FF,  /*  5 light blue   */
+    0x00AA00,  /*  6 dark green   */
+    0x55FF55,  /*  7 light green  */
+    0x00AAAA,  /*  8 dark cyan    */
+    0x55FFFF,  /*  9 light cyan   */
+    0xAA0000,  /* 10 dark red     */
+    0xFF5555,  /* 11 light red    */
+    0xAA00AA,  /* 12 dark magenta */
+    0xFF55FF,  /* 13 light magenta*/
+    0xAA5500,  /* 14 brown/orange */
+    0xFFFF55,  /* 15 yellow       */
 };
 
 void luna8_api_init(void) {
@@ -198,6 +206,13 @@ typedef struct {
 
 static L8Sprite g_sprites[SPR_COUNT];
 
+static inline int hexval(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
 void luna8_sprdata(int id, const char* data, int w, int h) {
     if (id < 0 || id >= SPR_COUNT) return;
     if (!data || w <= 0 || h <= 0 || w > SPR_MAX_W || h > SPR_MAX_H) return;
@@ -211,13 +226,12 @@ void luna8_sprdata(int id, const char* data, int w, int h) {
     uint8_t* buf = (uint8_t*)calloc(total, 1);
     if (!buf) return;
 
-    /* парсим: '0'..'7' = palette index, всё остальное (пробелы, \n, \r) — пропускаем */
+    /* парсим: hex-символы 0-9, a-f, A-F = palette index (0..15),
+    всё остальное (пробелы, \n, \r, разделители) — пропускаем */
     size_t n = 0;
     for (const char* p = data; *p && n < total; p++) {
-        char c = *p;
-        if (c >= '0' && c <= '7') {
-            buf[n++] = (uint8_t)(c - '0');
-        }
+        int v = hexval(*p);
+        if (v >= 0) buf[n++] = (uint8_t)v;
     }
 
     s->data = buf;

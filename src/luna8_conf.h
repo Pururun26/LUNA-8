@@ -8,7 +8,7 @@
 #define FPS        60
 #define WINDOW_TITLE "LUNA-8"
 
-#define PALETTE_SIZE  8
+#define PALETTE_SIZE  16
 
 #define BTN_COUNT   6
 #define PLAYER_MAX  2
