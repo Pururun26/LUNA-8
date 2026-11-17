@@ -10,16 +10,16 @@ static int l_cls(lua_State* L) {
 }
 
 static int l_pset(lua_State* L) {
-    int x = (int)floor(luaL_checknumber(L, 1));
-    int y = (int)floor(luaL_checknumber(L, 2));
-    int c = (int)luaL_optinteger(L, 3, 0);
+    int x = (int)floor(luaL_optnumber(L, 1, 0));
+    int y = (int)floor(luaL_optnumber(L, 2, 0));
+    int c = (int)luaL_optinteger(L, 3, 15);
     luna8_pset(x, y, c);
     return 0;
 }
 
 static int l_pget(lua_State* L) {
-    int x = (int)floor(luaL_checknumber(L, 1));
-    int y = (int)floor(luaL_checknumber(L, 2));
+    int x = (int)floor(luaL_optnumber(L, 1, 0));
+    int y = (int)floor(luaL_optnumber(L, 2, 0));
     lua_pushinteger(L, luna8_pget(x, y));
     return 1;
 }
@@ -28,7 +28,7 @@ static int l_text(lua_State* L) {
     const char* s = luaL_checkstring(L, 1);
     int x = (int)floor(luaL_optnumber(L, 2, 0));
     int y = (int)floor(luaL_optnumber(L, 3, 0));
-    int c = (int)luaL_optnumber(L, 4, 7);
+    int c = (int)luaL_optnumber(L, 4, 15);
     luna8_text(s, x, y, c);
     return 0;
 }
@@ -46,7 +46,7 @@ static int l_line(lua_State* L) {
     int y0 = (int)floor(luaL_checknumber(L, 2));
     int x1 = (int)floor(luaL_checknumber(L, 3));
     int y1 = (int)floor(luaL_checknumber(L, 4));
-    int c  = (int)luaL_optnumber(L, 5, 0);
+    int c  = (int)luaL_optnumber(L, 5, 15);
     luna8_line(x0, y0, x1, y1, c);
     return 0;
 }
@@ -56,7 +56,7 @@ static int l_rect(lua_State* L) {
     int y = (int)floor(luaL_checknumber(L, 2));
     int w = (int)floor(luaL_checknumber(L, 3));
     int h = (int)floor(luaL_checknumber(L, 4));
-    int c = (int)luaL_optnumber(L, 5, 0);
+    int c = (int)luaL_optnumber(L, 5, 15);
     int filled = 0;
     if (!lua_isnoneornil(L, 6)) filled = lua_toboolean(L, 6);
     luna8_rect(x, y, w, h, c, filled);
@@ -68,7 +68,7 @@ static int l_oval(lua_State* L) {
     int y = (int)floor(luaL_checknumber(L, 2));
     int w = (int)floor(luaL_checknumber(L, 3));
     int h = (int)floor(luaL_checknumber(L, 4));
-    int c = (int)luaL_optnumber(L, 5, 0);
+    int c = (int)luaL_optnumber(L, 5, 15);
     int filled = 0;
     if (!lua_isnoneornil(L, 6)) filled = lua_toboolean(L, 6);
     luna8_oval(x, y, w, h, c, filled);
