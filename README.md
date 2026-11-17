@@ -111,20 +111,31 @@ Auto-saved on change. Storage: `save/<cart>.bin` next to exe (native) or `localS
 
 ## Palette
 
-The default palette is 16 colors: four grays followed by a dark/light pair for each hue.
+The default palette is 16 colors, sorted ascending by hex value (black → white).
+This makes sprite data readable as gradients: `0123456789abcdef` fades smoothly.
 
 | # | Color         | Hex       | # | Color         | Hex       |
 |---|---------------|-----------|----|---------------|-----------|
-| 0 | black         | `#000000` | 8 | dark cyan     | `#00AAAA` |
-| 1 | dark gray     | `#555555` | 9 | light cyan    | `#55FFFF` |
-| 2 | light gray    | `#AAAAAA` | a | dark red      | `#AA0000` |
-| 3 | white         | `#FFFFFF` | b | light red     | `#FF5555` |
-| 4 | dark blue     | `#0000AA` | c | dark magenta  | `#AA00AA` |
+| 0 | black         | `#000000` | 8 | dark red      | `#AA0000` |
+| 1 | dark blue     | `#0000AA` | 9 | dark magenta  | `#AA00AA` |
+| 2 | dark green    | `#00AA00` | a | brown/orange  | `#AA5500` |
+| 3 | dark cyan     | `#00AAAA` | b | light gray    | `#AAAAAA` |
+| 4 | dark gray     | `#555555` | c | light red     | `#FF5555` |
 | 5 | light blue    | `#5555FF` | d | light magenta | `#FF55FF` |
-| 6 | dark green    | `#00AA00` | e | brown/orange  | `#AA5500` |
-| 7 | light green   | `#55FF55` | f | yellow        | `#FFFF55` |
+| 6 | light green   | `#55FF55` | e | yellow        | `#FFFF55` |
+| 7 | light cyan    | `#55FFFF` | f | white         | `#FFFFFF` |
+
+Index `0` is black (default background), `15` (`f`) is white (default text color).
 
 Change any color at runtime with `pal(i, 0xRRGGBB)`, `i` in 0..15. Palette swaps are cheap — sprites store only indices, colors are looked up at draw time, so a single `pal()` call re-tints every sprite on screen.
+
+Sprites use one hex character per pixel (`'0'..'9'`, `'a'..'f'`), e.g.:
+
+```lua
+sprdata(1, [[
+0123456789abcdef
+]], 16, 1)
+```
 
 ---
 

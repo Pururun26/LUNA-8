@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
-"""gen_sprite.py — PNG → sprdata() строка для LUNA-8.
+"""gen_sprite.py — PNG → sprdata() for LUNA-8.
 
 Usage:
     python tools/gen_sprite.py sprite.png
     python tools/gen_sprite.py sprite.png --lua 1
     python tools/gen_sprite.py sprite.png --lua 5 --size 16x16
     python tools/gen_sprite.py sprite.png --colorkey 0
-    python tools/gen_sprite.py sprite.png --palette "000000,555555,..."
+    python tools/gen_sprite.py sprite.png --palette "000000,0000aa,..."
 
-Палитра по умолчанию (DEFAULT_PALETTE, 16 цветов):
-    0 000000 black        1 555555 dk gray
-    2 aaaaaa lt gray      3 ffffff white
-    4 0000aa dk blue      5 5555ff lt blue
-    6 00aa00 dk green     7 55ff55 lt green
-    8 00aaaa dk cyan      9 55ffff lt cyan
-    a aa0000 dk red       b ff5555 lt red
-    c aa00aa dk magenta   d ff55ff lt magenta
-    e aa5500 brown        f ffff55 yellow
+Default palette (16 colors, sorted ascending by hex — matches luna8_api.c):
+    0 000000 black        8 aa0000 dark red
+    1 0000aa dark blue    9 aa00aa dark magenta
+    2 00aa00 dark green   a aa5500 brown
+    3 00aaaa dark cyan    b aaaaaa light gray
+    4 555555 dark gray    c ff5555 light red
+    5 5555ff light blue   d ff55ff light magenta
+    6 55ff55 light green  e ffff55 yellow
+    7 55ffff light cyan   f ffffff white
 
-Пиксели выводятся hex-символами 0-9a-f (нижний регистр), совместимыми
-с парсером luna8_sprdata(). Каждый пиксель PNG с alpha < 128 → colorkey
-(по умолчанию 0). Остальные → ближайший по RGB цвет из палитры.
+Pixels are emitted as lowercase hex chars 0-9a-f (one per pixel),
+compatible with luna8_sprdata(). Any PNG pixel with alpha < 128
+becomes --colorkey (default 0). Others map to the nearest RGB color.
 """
 
 import sys
@@ -31,22 +31,22 @@ from PIL import Image
 HEX = "0123456789abcdef"
 
 DEFAULT_PALETTE = [
-    (0x00, 0x00, 0x00),  # 0
-    (0x55, 0x55, 0x55),  # 1
-    (0xAA, 0xAA, 0xAA),  # 2
-    (0xFF, 0xFF, 0xFF),  # 3
-    (0x00, 0x00, 0xAA),  # 4
-    (0x55, 0x55, 0xFF),  # 5
-    (0x00, 0xAA, 0x00),  # 6
-    (0x55, 0xFF, 0x55),  # 7
-    (0x00, 0xAA, 0xAA),  # 8
-    (0x55, 0xFF, 0xFF),  # 9
-    (0xAA, 0x00, 0x00),  # 10 / a
-    (0xFF, 0x55, 0x55),  # 11 / b
-    (0xAA, 0x00, 0xAA),  # 12 / c
-    (0xFF, 0x55, 0xFF),  # 13 / d
-    (0xAA, 0x55, 0x00),  # 14 / e
-    (0xFF, 0xFF, 0x55),  # 15 / f
+    (0x00, 0x00, 0x00),  #  0 black
+    (0x00, 0x00, 0xAA),  #  1 dark blue
+    (0x00, 0xAA, 0x00),  #  2 dark green
+    (0x00, 0xAA, 0xAA),  #  3 dark cyan
+    (0x55, 0x55, 0x55),  #  4 dark gray
+    (0x55, 0x55, 0xFF),  #  5 light blue
+    (0x55, 0xFF, 0x55),  #  6 light green
+    (0x55, 0xFF, 0xFF),  #  7 light cyan
+    (0xAA, 0x00, 0x00),  #  8 dark red
+    (0xAA, 0x00, 0xAA),  #  9 dark magenta
+    (0xAA, 0x55, 0x00),  # 10 brown
+    (0xAA, 0xAA, 0xAA),  # 11 light gray
+    (0xFF, 0x55, 0x55),  # 12 light red
+    (0xFF, 0x55, 0xFF),  # 13 light magenta
+    (0xFF, 0xFF, 0x55),  # 14 yellow
+    (0xFF, 0xFF, 0xFF),  # 15 white
 ]
 
 

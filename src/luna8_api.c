@@ -13,22 +13,22 @@ uint8_t  luna8_fb[SCREEN_W * SCREEN_H];
 uint32_t luna8_palette[PALETTE_SIZE];
 
 static const uint32_t DEFAULT_PALETTE[PALETTE_SIZE] = {
-    0x000000,  /*  0 black        */
-    0x555555,  /*  1 dark gray    */
-    0xAAAAAA,  /*  2 light gray   */
-    0xFFFFFF,  /*  3 white        */
-    0x0000AA,  /*  4 dark blue    */
-    0x5555FF,  /*  5 light blue   */
-    0x00AA00,  /*  6 dark green   */
-    0x55FF55,  /*  7 light green  */
-    0x00AAAA,  /*  8 dark cyan    */
-    0x55FFFF,  /*  9 light cyan   */
-    0xAA0000,  /* 10 dark red     */
-    0xFF5555,  /* 11 light red    */
-    0xAA00AA,  /* 12 dark magenta */
-    0xFF55FF,  /* 13 light magenta*/
-    0xAA5500,  /* 14 brown/orange */
-    0xFFFF55,  /* 15 yellow       */
+    0x000000,  /*  0 black         */
+    0x0000AA,  /*  1 dark blue     */
+    0x00AA00,  /*  2 dark green    */
+    0x00AAAA,  /*  3 dark cyan     */
+    0x555555,  /*  4 dark gray     */
+    0x5555FF,  /*  5 light blue    */
+    0x55FF55,  /*  6 light green   */
+    0x55FFFF,  /*  7 light cyan    */
+    0xAA0000,  /*  8 dark red      */
+    0xAA00AA,  /*  9 dark magenta  */
+    0xAA5500,  /* 10 brown/orange  */
+    0xAAAAAA,  /* 11 light gray    */
+    0xFF5555,  /* 12 light red     */
+    0xFF55FF,  /* 13 light magenta */
+    0xFFFF55,  /* 14 yellow        */
+    0xFFFFFF,  /* 15 white         */
 };
 
 void luna8_api_init(void) {
