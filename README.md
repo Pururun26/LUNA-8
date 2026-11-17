@@ -57,7 +57,7 @@ pal(i, 0xRRGGBB)                   -- set palette color i (0..15)
 line(x0, y0, x1, y1, c)
 rect(x, y, w, h, c, [filled=true])
 oval(x, y, w, h, c, [filled=true]) -- circle when w == h
-text(s, [x=0], [y=0], [c=3])       -- 3x4 font, uppercase only
+text(s, [x=0], [y=0], [c=3])       -- 3x5 font, uppercase only
 ```
 
 Coordinates accept floats — they are floored. `pset(10.7, 5.2, 3)` draws at `(10, 5)`.
