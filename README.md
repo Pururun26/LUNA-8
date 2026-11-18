@@ -45,6 +45,98 @@ That's it. No `_init`, no `_update`, no `_draw`. One function, 60 FPS.
 
 ---
 
+```markdown
+## Modularity
+
+Small games fit in one `game.lua`. Larger projects split into multiple files
+and get packed into `game.lua` with a single command.
+
+### Project layout
+
+```
+mygame/
+├── data/
+│   ├── main.lua            ← entry point with --[[.lua]] includes
+│   ├── player.lua
+│   ├── enemies.lua
+│   └── bullets.lua
+├── tools/
+│   └── pack.py             ← ships with LUNA-8
+├── game.lua                ← generated (do not edit)
+└── luna8.exe
+```
+
+### Include syntax
+
+In `data/main.lua`, one include per line:
+
+```lua
+--[[player.lua]]
+--[[enemies.lua]]
+--[[bullets.lua]]
+
+function luna()
+    cls(0)
+    player_update()
+    enemies_update()
+    bullets_update()
+end
+```
+
+The path is **relative to the current file**. Nesting is allowed (up to 32 levels),
+cycles are detected and reported with the full chain.
+
+### Pack
+
+From the project root:
+
+```bash
+python tools/pack.py data/main.lua
+# → ./game.lua
+```
+
+`pack.py` replaces each `--[[x.lua]]` line with the contents of `x.lua`,
+wraps each module with `-- >>> x.lua` / `-- <<< x.lua` markers
+(invisible in Lua, useful in stack traces), and writes the result to `game.lua`
+in the **current directory**.
+
+Then run as usual:
+
+```bash
+./luna8.exe
+```
+
+### Run script
+
+Automate pack + run with a tiny script next to `luna8.exe`.
+
+**Windows — `run.bat`:**
+
+```bat
+@echo off
+python tools\pack.py data\main.lua
+if errorlevel 1 exit /b 1
+luna8.exe
+```
+
+**Linux / macOS — `run.sh`:**
+
+```bash
+#!/bin/sh
+set -e
+python3 tools/pack.py data/main.lua
+./luna8
+```
+
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+Double-click `run.bat` (Windows) or `./run.sh` — pack runs, game starts.
+
+---
+
 ## API
 
 ### Graphics
