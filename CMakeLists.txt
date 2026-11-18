@@ -20,6 +20,7 @@ set(LUA_SOURCES
     ltable.c ltm.c lundump.c lvm.c lzio.c
     lauxlib.c
     lbaselib.c lcorolib.c lmathlib.c lstrlib.c ltablib.c
+    lutf8lib.c
 )
 list(TRANSFORM LUA_SOURCES PREPEND "${LUA_SRC_DIR}/")
 

@@ -36,6 +36,7 @@ static void luna8_open_libs(lua_State *L) {
         {LUA_STRLIBNAME,  luaopen_string},
         {LUA_MATHLIBNAME, luaopen_math},
         {LUA_COLIBNAME,   luaopen_coroutine},
+        {LUA_UTF8LIBNAME, luaopen_utf8},
         {NULL, NULL}
     };
     for (const luaL_Reg* lib = libs; lib->func; lib++) {
@@ -44,7 +45,7 @@ static void luna8_open_libs(lua_State *L) {
     }
 
     /* Убираем файловый доступ и загрузку байткода.
-       io/os/debug/package/utf8 отсутствуют в сборке вообще,
+       io/os/debug/package отсутствуют в сборке вообще,
        а эти функции живут в base/string — снимаем руками. */
     static const char* banned[] = {
         "dofile", "loadfile", "load", "loadstring", NULL

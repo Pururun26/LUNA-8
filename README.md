@@ -45,7 +45,6 @@ That's it. No `_init`, no `_update`, no `_draw`. One function, 60 FPS.
 
 ---
 
-```markdown
 ## Modularity
 
 Small games fit in one `game.lua`. Larger projects split into multiple files
@@ -149,10 +148,16 @@ pal(i, 0xRRGGBB)                   -- set palette color i (0..15)
 line(x0, y0, x1, y1, c)
 rect(x, y, w, h, c, [filled=true])
 oval(x, y, w, h, c, [filled=true]) -- circle when w == h
-text(s, [x=0], [y=0], [c=3])       -- 3x5 font, uppercase only
+text(s, [x=0], [y=0], [c=3])       -- 5x12 UTF-8 font, supports Cyrillic & lowercase
 ```
 
 Coordinates accept floats — they are floored. `pset(10.7, 5.2, 3)` draws at `(10, 5)`.
+
+#### Font
+The default font is **Monogram**, a beautiful 5x12 pixel-perfect monospace font. It fully supports the ASCII set, Latin-1 supplement, and Cyrillic (Russian) in UTF-8 encoding. 
+You can download the original font and support the author here: [Monogram by datagoblin](https://datagoblin.itch.io/monogram).
+
+To move to the next line, simply use the newline character `\n` inside the string. The line height is 14 pixels (12 for the glyph + 2 for spacing).
 
 ### Sprites
 
@@ -235,7 +240,7 @@ sprdata(1, [[
 
 - **Framework, not console.** You write `game.lua`, we run it. No built-in editor, no cartridge format.
 - **Minimal API.** 18 functions total. If something can be expressed with existing ones, we don't add it.
-- **Sandboxed but not paranoid.** No `io`, `os`, `debug`, `require`, `dofile`, `loadfile`, `load`. Every file goes through the host.
+- **Sandboxed but not paranoid.** No `io`, `os`, `debug`, `require`, `dofile`, `loadfile`, `load`. But `utf8` is fully supported out of the box.
 - **Pixel-perfect by design.** 160×120, integer-scaled, letterboxed. No sub-pixel rendering.
 
 ---
@@ -258,4 +263,10 @@ cmake --build build_web
 cp game.lua build_web/
 python -m http.server 8000 -d build_web
 # open http://localhost:8000
+```
+
+---
+
+## Credits
+- **Font**: [Monogram](https://datagoblin.itch.io/monogram) by [datagoblin](https://datagoblin.itch.io/), licensed under CC0.
 ```

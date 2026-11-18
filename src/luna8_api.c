@@ -1,6 +1,6 @@
 // luna8_api.c
 #include "luna8_api.h"
-#include "luna8_font3x5.h"
+#include "luna8_font.h"
 #include "luna8_save.h"
 #include "raylib.h"
 
@@ -42,6 +42,27 @@ static int clamp_color(int c) {
     return (c < 0 || c >= PALETTE_SIZE) ? 0 : c;
 }
 
+/* Декодирует один UTF-8 символ и сдвигает указатель */
+static uint32_t utf8_decode(const char** s) {
+    const unsigned char* p = (const unsigned char*)*s;
+    uint32_t cp = 0;
+    int bytes = 0;
+
+    if (p[0] < 0x80)       { cp = p[0];         bytes = 1; }
+    else if ((p[0] & 0xE0) == 0xC0) { cp = p[0] & 0x1F; bytes = 2; }
+    else if ((p[0] & 0xF0) == 0xE0) { cp = p[0] & 0x0F; bytes = 3; }
+    else if ((p[0] & 0xF8) == 0xF0) { cp = p[0] & 0x07; bytes = 4; }
+    else { *s += 1; return '?'; } // Некорректный байт
+
+    for (int i = 1; i < bytes; i++) {
+        if ((p[i] & 0xC0) != 0x80) { *s += 1; return '?'; }
+        cp = (cp << 6) | (p[i] & 0x3F);
+    }
+    *s += bytes;
+    return cp;
+}
+
+
 void luna8_cls(int c) {
     memset(luna8_fb, (uint8_t)clamp_color(c), sizeof(luna8_fb));
 }
@@ -60,26 +81,42 @@ void luna8_text(const char *s, int x, int y, int color) {
     if (!s) return;
 
     int cx = x, cy = y;
+    const char *p = s;
 
-    for (const unsigned char *p = (const unsigned char *)s; *p; p++) {
-        if (*p == '\n') { cx = x; cy += FONT_CELL_H + 1; continue; }
-        if (*p == '\r') continue;
+    while (*p) {
+        uint32_t cp = utf8_decode(&p);
 
-        unsigned char u = *p;
-        if (u >= 'a' && u <= 'z') u -= 32;      /* lowercase → uppercase */
+        if (cp == '\n') { 
+            cx = x; 
+            cy += FONT_CELL_H + 2; // 12 (высота шрифта) + 2 (отступ между строками)
+            continue; 
+        }
+        if (cp == '\r') continue;
 
-        int idx = (int)u - FONT_FIRST;
-        if (idx < 0 || idx >= FONT_COUNT) idx = '?' - FONT_FIRST;
+        // Ищем глиф в сгенерированном массиве
+        const L8FontGlyph *g = luna8_get_glyph(cp);
+        
+        if (!g) {
+            // Если символа нет в шрифте (например, эмодзи), пропускаем или рисуем '?'
+            // Здесь мы просто сдвигаем курсор, чтобы текст не наложился
+            cx += 6; 
+            continue;
+        }
 
-        int w = luna8_font_w[idx];
+        // Рисуем 12 строк
         for (int row = 0; row < FONT_CELL_H; row++) {
-            unsigned char bits = luna8_font[idx][row];
+            uint8_t bits = g->rows[row];
+            // Рисуем 5 колонок
             for (int col = 0; col < FONT_CELL_W; col++) {
-                if ((bits >> (FONT_CELL_W - 1 - col)) & 1)
+                // В новом шрифте ширина 5, поэтому старший бит сдвигается на 4
+                if ((bits >> col) & 1) {
                     luna8_pset(cx + col, cy + row, color);
+                }
             }
         }
-        cx += w + 1;    /* +1 — межбуквенный интервал, иначе слипается */
+        
+        // Сдвигаем курсор: ширина буквы + 1 пиксель отступа
+        cx += g->width + 1; 
     }
 }
 
