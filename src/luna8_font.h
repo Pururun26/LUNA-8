@@ -1,6 +1,7 @@
 /* Auto-generated from font.json — do not edit. */
 #pragma once
 
+#include <stddef.h> /* for NULL */
 #include <stdint.h>
 
 #define FONT_CELL_W 5

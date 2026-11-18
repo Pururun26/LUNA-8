@@ -1,3 +1,5 @@
+# USE: python tools/gen_font.py tools/font.json -o src/luna8_font.h
+
 import json
 import sys
 import argparse
@@ -27,6 +29,7 @@ def main():
     with open(args.out, 'w', encoding='utf-8') as f:
         f.write("/* Auto-generated from font.json — do not edit. */\n")
         f.write("#pragma once\n\n")
+        f.write("#include <stddef.h> /* for NULL */\n")
         f.write("#include <stdint.h>\n\n")
         
         f.write("#define FONT_CELL_W 5\n")

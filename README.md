@@ -269,4 +269,3 @@ python -m http.server 8000 -d build_web
 
 ## Credits
 - **Font**: [Monogram](https://datagoblin.itch.io/monogram) by [datagoblin](https://datagoblin.itch.io/), licensed under CC0.
-```
