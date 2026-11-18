@@ -174,7 +174,7 @@ spr(id, [x=0], [y=0], [flip_x=false], [flip_y=false], [colorkey=-1])
 
 ### Tilemap
 
-LUNA-8 features a built-in, high-performance tilemap system that runs natively in C. It perfectly supports CSV exports from **Tiled** (and similar editors).
+LUNA-8 features a built-in, tilemap system that runs natively in C. It perfectly supports CSV exports from Tiled (and similar editors).
 
 ```lua
 mapdata(csv_string, [w=20], [h=15])
