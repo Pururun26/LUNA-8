@@ -3,7 +3,7 @@
 
 **A tiny retro game framework for Lua.**
 
-160×120 screen, 16-color palette, 4 sound channels, 512 sprites, 64 save slots.
+160×120 screen, 16-color palette, 4 sound channels, 512 sprites, tilemaps.
 Native + WebAssembly. One `game.lua` file is the whole cartridge.
 
 ---
@@ -18,7 +18,7 @@ pal(0, 0x1a0f2e)  -- repaint "black" into dark purple background
 local x = 80
 function LUNA()
     cls(0)
-    rect(x - 2, 58, 5, 5, 3)
+    rect(x - 2, 58, 5, 5, 15) -- 15 is white
     if btn(0) then x = x - 1 end
     if btn(1) then x = x + 1 end
 end
@@ -34,7 +34,7 @@ Run:
 
 ```lua
 -- top-level code runs once at startup
--- (no raylib calls here — only declarations, dget(), pal(), sprdata())
+-- (no raylib calls here — only declarations, dget(), pal(), sprdata(), mapdata())
 
 function LUNA()
     -- called 60 times per second
@@ -146,17 +146,14 @@ pset(x, y, c)                      -- set pixel
 pget(x, y) -> c                    -- get pixel (0 if out of bounds)
 pal(i, 0xRRGGBB)                   -- set palette color i (0..15)
 line(x0, y0, x1, y1, c)
-rect(x, y, w, h, c, [filled=true])
-oval(x, y, w, h, c, [filled=true]) -- circle when w == h
-text(s, [x=0], [y=0], [c=3])       -- 5x12 UTF-8 font, supports Cyrillic & lowercase
+rect(x, y, w, h, c, [filled=false])
+oval(x, y, w, h, c, [filled=false]) -- circle when w == h
+text(s, [x=0], [y=0], [c=15])      -- 5x12 UTF-8 font, supports Cyrillic & lowercase
 ```
 
-Coordinates accept floats — they are floored. `pset(10.7, 5.2, 3)` draws at `(10, 5)`.
+Coordinates accept floats — they are floored. `pset(10.7, 5.2, 15)` draws at `(10, 5)`.
 
 #### Font
-The default font is **Monogram**, a beautiful 5x12 pixel-perfect monospace font. It fully supports the ASCII set, Latin-1 supplement, and Cyrillic (Russian) in UTF-8 encoding. 
-You can download the original font and support the author here: [Monogram by datagoblin](https://datagoblin.itch.io/monogram).
-
 To move to the next line, simply use the newline character `\n` inside the string. The line height is 14 pixels (12 for the glyph + 2 for spacing).
 
 ### Sprites
@@ -166,9 +163,45 @@ sprdata(id, "02200220\n20022002\n...", [w=8], [h=8])
 spr(id, [x=0], [y=0], [flip_x=false], [flip_y=false], [colorkey=-1])
 ```
 
-`id` — 0..511. `w`, `h` — up to 64. Data is a string of **hex digits** `0-9`, `a-f` (or `A-F`), one character per pixel, mapping to palette indices 0..15. Whitespace and any non-hex characters (`\n`, spaces, comments) are ignored. `colorkey` — color index treated as transparent (`-1` = no transparency).
+`id` — 0..511. `w`, `h` — up to 64. Data is a string of **hex digits** `0-9`, `a-f` (or `A-F`), one character per pixel, mapping to palette indices 0..15. Whitespace and any non-hex characters (`\n`, spaces, comments) are ignored. 
+
+`colorkey` — color index (or a table of indices) treated as transparent. 
+- Pass `-1` for no transparency. 
+- Pass a single integer (e.g., `0`) to make one color transparent.
+- Pass a table (e.g., `{0, 1, 2}`) to make multiple colors transparent.
 
 > Index 10 is written `a`, not `10` — one character is exactly one pixel.
+
+### Tilemap
+
+LUNA-8 features a built-in, high-performance tilemap system that runs natively in C. It perfectly supports CSV exports from **Tiled** (and similar editors).
+
+```lua
+mapdata(csv_string, [w=20], [h=15])
+map([celx=0], [cely=0], [sx=0], [sy=0], [celw=20], [celh=15], [colorkey=-1])
+mget(x, y) -> id
+mset(x, y, id)
+```
+
+- `mapdata(data, [w], [h])` — Loads a map from a CSV string. The string should contain numbers separated by commas (newlines and spaces are ignored). `-1` means an empty tile, `0` is the first sprite, `1` is the second, etc. By default, it expects a 20x15 map (one screen).
+- `map(...)` — Draws the map. `celx`, `cely` are the starting tile coordinates. `sx`, `sy` are the screen pixel offsets. `celw`, `celh` define how many tiles to draw (default is 20x15).
+- `mget(x, y)` — Returns the tile ID at the given map coordinates (0-based). Returns `-1` if the coordinates are out of bounds or the tile is empty.
+- `mset(x, y, id)` — Sets the tile ID at the given map coordinates. Use `-1` to clear a tile.
+- `colorkey` — Works exactly like the sprite `colorkey`. Accepts `-1`, an integer, or a table of integers.
+
+**Tiled Integration:**
+Export your map layer from Tiled as a **CSV**. The first tile in your tileset will be exported as `0`, which aligns perfectly with `sprdata(0)`. Paste the exported CSV directly into your Lua code.
+
+```lua
+-- Example: loading a CSV map directly from Tiled
+mapdata([[
+0,0,0,0,0,0,0,0,0,0
+0,1,1,1,1,1,1,1,1,0
+0,1,-1,-1,-1,-1,-1,1,0
+0,1,1,1,1,1,1,1,1,0
+0,0,0,0,0,0,0,0,0,0
+]], 10, 5)
+```
 
 ### Input
 
@@ -239,7 +272,7 @@ sprdata(1, [[
 ## Philosophy
 
 - **Framework, not console.** You write `game.lua`, we run it. No built-in editor, no cartridge format.
-- **Minimal API.** 18 functions total. If something can be expressed with existing ones, we don't add it.
+- **Minimal API.** 21 functions total. If something can be expressed with existing ones, we don't add it.
 - **Sandboxed but not paranoid.** No `io`, `os`, `debug`, `require`, `dofile`, `loadfile`, `load`. But `utf8` is fully supported out of the box.
 - **Pixel-perfect by design.** 160×120, integer-scaled, letterboxed. No sub-pixel rendering.
 
@@ -268,4 +301,5 @@ python -m http.server 8000 -d build_web
 ---
 
 ## Credits
+
 - **Font**: [Monogram](https://datagoblin.itch.io/monogram) by [datagoblin](https://datagoblin.itch.io/), licensed under CC0.

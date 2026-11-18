@@ -27,7 +27,12 @@ int luna8_btn(int id, int player);
 int luna8_btnp(int id, int player);
 
 void luna8_sprdata(int id, const char* data, int w, int h);
-void luna8_spr(int id, int x, int y, int flip_x, int flip_y, int colorkey);
+void luna8_spr(int id, int x, int y, int flip_x, int flip_y, uint16_t colorkey_mask);
+
+void luna8_mapdata(const char* data, int w, int h);
+void luna8_map(int celx, int cely, int sx, int sy, int celw, int celh, uint16_t colorkey_mask);
+int  luna8_mget(int x, int y);
+void luna8_mset(int x, int y, int id);
 
 void    luna8_time_reset(void);
 int64_t luna8_time(void);       /* мс с момента init */

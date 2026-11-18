@@ -276,7 +276,7 @@ void luna8_sprdata(int id, const char* data, int w, int h) {
     s->h = h;
 }
 
-void luna8_spr(int id, int x, int y, int flip_x, int flip_y, int colorkey) {
+void luna8_spr(int id, int x, int y, int flip_x, int flip_y, uint16_t colorkey_mask) {
     if (id < 0 || id >= SPR_COUNT) return;
 
     const L8Sprite* s = &g_sprites[id];
@@ -287,10 +287,84 @@ void luna8_spr(int id, int x, int y, int flip_x, int flip_y, int colorkey) {
             int sx = flip_x ? (s->w - 1 - col) : col;
             int sy = flip_y ? (s->h - 1 - row) : row;
             uint8_t c = s->data[sy * s->w + sx];
-            if (colorkey >= 0 && c == (uint8_t)colorkey) continue;
+
+            // Проверяем, установлен ли бит для этого цвета
+            if (colorkey_mask & (1 << c)) continue; 
+
             luna8_pset(x + col, y + row, (int)c);
         }
     }
+}
+
+
+/* --- map --- */
+
+static int* g_map_data = NULL;
+static int  g_map_w = 0;
+static int  g_map_h = 0;
+
+void luna8_mapdata(const char* data, int w, int h) {
+    if (g_map_data) { free(g_map_data); g_map_data = NULL; }
+    if (!data || w <= 0 || h <= 0) return;
+    
+    g_map_w = w;
+    g_map_h = h;
+    g_map_data = (int*)malloc(sizeof(int) * w * h);
+    if (!g_map_data) return;
+
+    int i = 0;
+    const char* p = data;
+    
+    // Парсим числа, пропуская всё, что не является цифрой или минусом
+    while (*p && i < w * h) {
+        while (*p && *p != '-' && (*p < '0' || *p > '9')) p++;
+        if (!*p) break;
+        
+        char* endptr;
+        long val = strtol(p, &endptr, 10);
+        if (p == endptr) break; // не число
+        
+        g_map_data[i++] = (int)val;
+        p = endptr;
+    }
+    
+    // Если данных меньше, чем w * h, заполняем пустотой (-1)
+    while (i < w * h) {
+        g_map_data[i++] = -1;
+    }
+}
+
+void luna8_map(int celx, int cely, int sx, int sy, int celw, int celh, uint16_t colorkey_mask) {
+    if (!g_map_data) return;
+    
+    for (int row = 0; row < celh; row++) {
+        for (int col = 0; col < celw; col++) {
+            int mx = celx + col;
+            int my = cely + row;
+            
+            if (mx >= 0 && mx < g_map_w && my >= 0 && my < g_map_h) {
+                int tile = g_map_data[my * g_map_w + mx];
+                if (tile >= 0) {
+                    // Передаем маску дальше в spr
+                    luna8_spr(tile, sx + col * 8, sy + row * 8, 0, 0, colorkey_mask);
+                }
+            }
+        }
+    }
+}
+
+int luna8_mget(int x, int y) {
+    if (!g_map_data || x < 0 || x >= g_map_w || y < 0 || y >= g_map_h) {
+        return -1;
+    }
+    return g_map_data[y * g_map_w + x];
+}
+
+void luna8_mset(int x, int y, int id) {
+    if (!g_map_data || x < 0 || x >= g_map_w || y < 0 || y >= g_map_h) {
+        return;
+    }
+    g_map_data[y * g_map_w + x] = id;
 }
 
 
