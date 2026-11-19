@@ -1,13 +1,13 @@
 -- ==========================================
 -- 1. СИСТЕМА КАМЕРЫ
 -- ==========================================
-local _text = text
-local _rect = rect
-local _oval = oval
-local _line = line
-local _pset = pset
-local _spr  = spr
-local _map  = map
+local _text  = text
+local _rect  = rect
+local _oval  = oval
+local _line  = line
+local _pixel = pixel
+local _spr   = spr
+local _map   = map
 
 cam_x, cam_y = 0, 0
 
@@ -20,8 +20,16 @@ function text(s, x, y, c) _text(s, (x or 0) - cam_x, (y or 0) - cam_y, c) end
 function rect(x, y, w, h, c, f) _rect(x - cam_x, y - cam_y, w, h, c, f) end
 function oval(x, y, w, h, c, f) _oval(x - cam_x, y - cam_y, w, h, c, f) end
 function line(x0, y0, x1, y1, c) _line(x0 - cam_x, y0 - cam_y, x1 - cam_x, y1 - cam_y, c) end
-function pset(x, y, c) _pset(x - cam_x, y - cam_y, c) end
 function spr(id, x, y, fx, fy, ck) _spr(id, (x or 0) - cam_x, (y or 0) - cam_y, fx, fy, ck) end
+
+-- pixel: и чтение, и запись — обе с учётом камеры
+function pixel(x, y, c)
+    if c ~= nil then
+        _pixel(x - cam_x, y - cam_y, c)
+    else
+        return _pixel(x - cam_x, y - cam_y)
+    end
+end
 
 function map(celx, cely, sx, sy, celw, celh, ck)
     if celx == nil then
@@ -36,9 +44,8 @@ function map(celx, cely, sx, sy, celw, celh, ck)
 end
 
 -- ==========================================
--- 2. СПРАЙТЫ (ИСПРАВЛЕНО)
+-- 2. СПРАЙТЫ
 -- ==========================================
--- 0: Стена (синяя)
 sprdata(0, [[
 11111111
 11111111
@@ -50,7 +57,6 @@ sprdata(0, [[
 11111111
 ]])
 
--- 1: Пол (серый)
 sprdata(1, [[
 44444444
 44444444
@@ -62,7 +68,6 @@ sprdata(1, [[
 44444444
 ]])
 
--- 2: Закрытый сундук (фон прозрачный)
 sprdata(2, [[
 00000000
 0aaaaaa0
@@ -74,7 +79,6 @@ sprdata(2, [[
 00000000
 ]])
 
--- 3: Открытый сундук (внутри желтый)
 sprdata(3, [[
 00000000
 0aaaaaa0
@@ -86,7 +90,6 @@ sprdata(3, [[
 00000000
 ]])
 
--- 4: Игрок (белый, фон прозрачный)
 sprdata(4, [[
 000ff000
 000ff000
@@ -101,7 +104,6 @@ sprdata(4, [[
 -- ==========================================
 -- 3. КАРТА (30x20 тайлов)
 -- ==========================================
--- 0 - стена, 1 - пол, 2 - сундук
 mapdata([[
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
@@ -112,7 +114,7 @@ mapdata([[
 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
-0,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,0
 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
@@ -149,8 +151,8 @@ function update_game()
     local function is_solid(px, py)
         local tx = math.floor(px / 8)
         local ty = math.floor(py / 8)
-        local tile = mget(tx, ty)
-        return tile == 0 -- 0 - стена
+        local id = tile(tx, ty)       -- было mget
+        return id == 0                -- 0 — стена
     end
 
     if not is_solid(nx, ny) and not is_solid(nx + 7, ny) and
@@ -160,11 +162,11 @@ function update_game()
 
     local center_tx = math.floor((x + 4) / 8)
     local center_ty = math.floor((y + 4) / 8)
-    local current_tile = mget(center_tx, center_ty)
+    local current_tile = tile(center_tx, center_ty)   -- было mget
 
     if btnp(5) then
         if current_tile == 2 then
-            mset(center_tx, center_ty, 3)
+            tile(center_tx, center_ty, 3)             -- было mset
             message = "Сундук открыт!"
         else
             message = "Здесь пусто..."

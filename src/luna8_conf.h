@@ -23,4 +23,4 @@
 #define TONE_FADE          88          /* 2 ms при 44100 */
 #define TONE_CHANNELS    4
 
-#define SAVE_SLOTS  64
+#define SAVE_SLOTS  128

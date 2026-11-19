@@ -12,19 +12,21 @@ static int l_cls(lua_State* L) {
     return 0;
 }
 
-static int l_pset(lua_State* L) {
-    int x = (int)floor(luaL_optnumber(L, 1, 0));
-    int y = (int)floor(luaL_optnumber(L, 2, 0));
-    int c = (int)luaL_optinteger(L, 3, 15);
-    luna8_pset(x, y, c);
-    return 0;
-}
+static int l_pixel(lua_State* L) {
+    int x = (int)floor(luaL_checknumber(L, 1));
+    int y = (int)floor(luaL_checknumber(L, 2));
 
-static int l_pget(lua_State* L) {
-    int x = (int)floor(luaL_optnumber(L, 1, 0));
-    int y = (int)floor(luaL_optnumber(L, 2, 0));
-    lua_pushinteger(L, luna8_pget(x, y));
-    return 1;
+    // Если передан третий аргумент (цвет) — рисуем
+    if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
+        int c = (int)luaL_checkinteger(L, 3);
+        luna8_pset(x, y, c);
+        return 0; // ничего не возвращаем
+    } 
+    // Иначе — читаем
+    else {
+        lua_pushinteger(L, luna8_pget(x, y));
+        return 1; // возвращаем цвет
+    }
 }
 
 static int l_text(lua_State* L) {
@@ -177,19 +179,18 @@ static int l_map(lua_State* L) {
     return 0;
 }
 
-static int l_mget(lua_State* L) {
-    int x = (int)floor(luaL_optnumber(L, 1, 0));
-    int y = (int)floor(luaL_optnumber(L, 2, 0));
-    lua_pushinteger(L, luna8_mget(x, y));
-    return 1;
-}
+static int l_tile(lua_State* L) {
+    int x = (int)floor(luaL_checknumber(L, 1));
+    int y = (int)floor(luaL_checknumber(L, 2));
 
-static int l_mset(lua_State* L) {
-    int x = (int)floor(luaL_optnumber(L, 1, 0));
-    int y = (int)floor(luaL_optnumber(L, 2, 0));
-    int id = (int)luaL_optnumber(L, 3, 0);
-    luna8_mset(x, y, id);
-    return 0;
+    if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
+        int id = (int)luaL_checkinteger(L, 3);
+        luna8_mset(x, y, id);
+        return 0;
+    } else {
+        lua_pushinteger(L, luna8_mget(x, y));
+        return 1;
+    }
 }
 
 
@@ -218,19 +219,21 @@ static int l_tone(lua_State* L) {
 }
 
 
-// --- save/load ---
+// --- slot ---
 
-static int l_dset(lua_State* L) {
-    int slot = (int)luaL_checkinteger(L, 1);
-    lua_Integer v = luaL_checkinteger(L, 2);
-    luna8_dset(slot, (int64_t)v);
-    return 0;
-}
+static int l_slot(lua_State* L) {
+    int idx = (int)luaL_checkinteger(L, 1);
 
-static int l_dget(lua_State* L) {
-    int slot = (int)luaL_checkinteger(L, 1);
-    lua_pushinteger(L, (lua_Integer)luna8_dget(slot));
-    return 1;
+    if (lua_gettop(L) >= 2) {
+        // Запись: slot(1, 200)
+        lua_Integer v = luaL_checkinteger(L, 2);
+        luna8_dset(idx, (int64_t)v);
+        return 0;
+    } else {
+        // Чтение: slot(1)
+        lua_pushinteger(L, (lua_Integer)luna8_dget(idx));
+        return 1;
+    }
 }
 
 
@@ -238,8 +241,7 @@ static int l_dget(lua_State* L) {
 
 void luna8_register_api(lua_State *L) {
     lua_register(L, "cls",     l_cls);
-    lua_register(L, "pset",    l_pset);
-    lua_register(L, "pget",    l_pget);
+    lua_register(L, "pixel",   l_pixel);
     lua_register(L, "text",    l_text);
     lua_register(L, "pal",     l_pal);
     lua_register(L, "line",    l_line);
@@ -251,11 +253,9 @@ void luna8_register_api(lua_State *L) {
     lua_register(L, "spr",     l_spr);
     lua_register(L, "mapdata", l_mapdata);
     lua_register(L, "map",     l_map);
-    lua_register(L, "mget",    l_mget);
-    lua_register(L, "mset",    l_mset);
+    lua_register(L, "tile",    l_tile);
     lua_register(L, "time",    l_time);
     lua_register(L, "utime",   l_utime);
     lua_register(L, "tone",    l_tone);
-    lua_register(L, "dset",    l_dset);
-    lua_register(L, "dget",    l_dget);
+    lua_register(L, "slot",    l_slot);
 }

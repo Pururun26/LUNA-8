@@ -34,7 +34,7 @@ Run:
 
 ```lua
 -- top-level code runs once at startup
--- (no raylib calls here — only declarations, dget(), pal(), sprdata(), mapdata())
+-- (no raylib calls here — only declarations, slot(), pal(), sprdata(), mapdata())
 
 function LUNA()
     -- called 60 times per second
@@ -74,7 +74,7 @@ In `data/main.lua`, one include per line:
 --[[enemies.lua]]
 --[[bullets.lua]]
 
-function luna()
+function LUNA()
     cls(0)
     player_update()
     enemies_update()
@@ -142,8 +142,8 @@ Double-click `run.bat` (Windows) or `./run.sh` — pack runs, game starts.
 
 ```lua
 cls([c=0])                         -- clear screen with color c
-pset(x, y, c)                      -- set pixel
-pget(x, y) -> c                    -- get pixel (0 if out of bounds)
+pixel(x, y) -> c                   -- read color at (x, y)
+pixel(x, y, c)                     -- set pixel at (x, y) to color c
 pal(i, 0xRRGGBB)                   -- set palette color i (0..15)
 line(x0, y0, x1, y1, c)
 rect(x, y, w, h, c, [filled=false])
@@ -151,7 +151,8 @@ oval(x, y, w, h, c, [filled=false]) -- circle when w == h
 text(s, [x=0], [y=0], [c=15])      -- 5x12 UTF-8 font, supports Cyrillic & lowercase
 ```
 
-Coordinates accept floats — they are floored. `pset(10.7, 5.2, 15)` draws at `(10, 5)`.
+Coordinates accept floats — they are floored. `pixel(10.7, 5.2, 15)` draws at `(10, 5)`.
+`pixel(x, y)` on out-of-bounds coordinates returns `0`.
 
 #### Font
 To move to the next line, simply use the newline character `\n` inside the string. The line height is 14 pixels (12 for the glyph + 2 for spacing).
@@ -163,10 +164,10 @@ sprdata(id, "02200220\n20022002\n...", [w=8], [h=8])
 spr(id, [x=0], [y=0], [flip_x=false], [flip_y=false], [colorkey=-1])
 ```
 
-`id` — 0..511. `w`, `h` — up to 64. Data is a string of **hex digits** `0-9`, `a-f` (or `A-F`), one character per pixel, mapping to palette indices 0..15. Whitespace and any non-hex characters (`\n`, spaces, comments) are ignored. 
+`id` — 0..511. `w`, `h` — up to 64. Data is a string of **hex digits** `0-9`, `a-f` (or `A-F`), one character per pixel, mapping to palette indices 0..15. Whitespace and any non-hex characters (`\n`, spaces, comments) are ignored.
 
-`colorkey` — color index (or a table of indices) treated as transparent. 
-- Pass `-1` for no transparency. 
+`colorkey` — color index (or a table of indices) treated as transparent.
+- Pass `-1` for no transparency.
 - Pass a single integer (e.g., `0`) to make one color transparent.
 - Pass a table (e.g., `{0, 1, 2}`) to make multiple colors transparent.
 
@@ -179,14 +180,14 @@ LUNA-8 features a built-in, tilemap system that runs natively in C. It perfectly
 ```lua
 mapdata(csv_string, [w=20], [h=15])
 map([celx=0], [cely=0], [sx=0], [sy=0], [celw=20], [celh=15], [colorkey=-1])
-mget(x, y) -> id
-mset(x, y, id)
+tile(x, y) -> id                   -- read tile at (x, y)
+tile(x, y, id)                     -- write tile at (x, y)
 ```
 
 - `mapdata(data, [w], [h])` — Loads a map from a CSV string. The string should contain numbers separated by commas (newlines and spaces are ignored). `-1` means an empty tile, `0` is the first sprite, `1` is the second, etc. By default, it expects a 20x15 map (one screen).
 - `map(...)` — Draws the map. `celx`, `cely` are the starting tile coordinates. `sx`, `sy` are the screen pixel offsets. `celw`, `celh` define how many tiles to draw (default is 20x15).
-- `mget(x, y)` — Returns the tile ID at the given map coordinates (0-based). Returns `-1` if the coordinates are out of bounds or the tile is empty.
-- `mset(x, y, id)` — Sets the tile ID at the given map coordinates. Use `-1` to clear a tile.
+- `tile(x, y)` — Returns the tile ID at the given map coordinates (0-based). Returns `-1` if the coordinates are out of bounds or the tile is empty.
+- `tile(x, y, id)` — Sets the tile ID at the given map coordinates. Use `-1` to clear a tile.
 - `colorkey` — Works exactly like the sprite `colorkey`. Accepts `-1`, an integer, or a table of integers.
 
 **Tiled Integration:**
@@ -231,11 +232,11 @@ tone(freq, [dur=15], [vol=30], [ch=0])
 ### Save
 
 ```lua
-dset(slot, value)                  -- write int64 to slot (0..63)
-dget(slot) -> value                -- read int64 from slot
+slot(i) -> value                   -- read int64 from slot i (0..127)
+slot(i, value)                     -- write int64 to slot i (0..127)
 ```
 
-Auto-saved on change. Storage: `save/<cart>.bin` next to exe (native) or `localStorage` (web).
+Auto-saved on change. Storage: `save/<cart>.bin` next to exe (native) or `localStorage` (web). Total save area is **1024 bytes** (128 slots × 8 bytes).
 
 ---
 
@@ -272,7 +273,7 @@ sprdata(1, [[
 ## Philosophy
 
 - **Framework, not console.** You write `game.lua`, we run it. No built-in editor, no cartridge format.
-- **Minimal API.** 21 functions total. If something can be expressed with existing ones, we don't add it.
+- **Minimal API.** 18 functions total. If something can be expressed with existing ones, we don't add it.
 - **Sandboxed but not paranoid.** No `io`, `os`, `debug`, `require`, `dofile`, `loadfile`, `load`. But `utf8` is fully supported out of the box.
 - **Pixel-perfect by design.** 160×120, integer-scaled, letterboxed. No sub-pixel rendering.
 
