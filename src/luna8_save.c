@@ -94,8 +94,6 @@ void luna8_save_open(const char *cart_path) {
             }
             UnloadFileData(data);
         }
-    } else {
-        TraceLog(LOG_INFO, "LUNA-8 save: no file, starting fresh");
     }
 #endif
     g_save_ready = 1;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(LUNA8 VERSION 0.9.2 LANGUAGES C CXX)
+project(LUNA8 VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -9,6 +9,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
+
+# ---------- Опция для сборки Dev-версии (с консолью) ----------
+option(LUNA8_DEV_BUILD "Build for development (with console window and logs)" OFF)
 
 # ---------- Lua 5.4.9 ----------
 set(LUA_DIR ${CMAKE_SOURCE_DIR}/lua-5.4.9)
@@ -71,12 +74,13 @@ endif()
 # ---------- executable ----------
 if(MINGW)
     enable_language(RC)
-    set(LUNA8_RESOURCES icon.rc)    # Windows: подключаем .rc
+    set(LUNA8_RESOURCES icon.rc)
 else()
-    set(LUNA8_RESOURCES)            # Linux/wasm: пусто, ничего не подключаем
+    set(LUNA8_RESOURCES)
 endif()
 
-add_executable(luna8
+# Собираем все исходники в одну переменную
+set(LUNA8_SOURCES
     src/luna8.c
     src/luna8_api.c
     src/luna8_api_lua.c
@@ -84,36 +88,51 @@ add_executable(luna8
     src/luna8_save.c
     ${LUNA8_RESOURCES}
 )
-target_include_directories(luna8 PRIVATE src)
-target_link_libraries(luna8 PRIVATE lua_static raylib)
 
-target_compile_options(luna8 PRIVATE
-    -O3 -ffunction-sections -fdata-sections
-)
+# Список целей, которые мы будем настраивать
+set(TARGETS_TO_BUILD luna8)
 
-if(EMSCRIPTEN)
-    set_target_properties(luna8 PROPERTIES OUTPUT_NAME "index")
-    target_link_options(luna8 PRIVATE
-        -O3
-        -Wl,--gc-sections
-        -sUSE_GLFW=3
-        -sALLOW_MEMORY_GROWTH=1
-        -sASYNCIFY
-        -sASYNCIFY_STACK_SIZE=16384
-        -sASSERTIONS=0
-        -sMALLOC=emmalloc
-        "-sEXPORTED_RUNTIME_METHODS=['callMain']"
-        --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html
-    )
-elseif(MINGW)
-    target_link_options(luna8 PRIVATE
-        -Wl,--gc-sections
-        -s
-        -static-libgcc -static-libstdc++
-    )
-elseif(UNIX AND NOT EMSCRIPTEN)
-    target_link_options(luna8 PRIVATE
-        -Wl,--gc-sections
-        -s
-    )
+if(WIN32 AND NOT EMSCRIPTEN)
+    # 1. Релизная версия (БЕЗ консоли, GUI)
+    add_executable(luna8 WIN32 ${LUNA8_SOURCES})
+
+    # 2. Девелоперская версия (С консолью)
+    add_executable(luna8_dev ${LUNA8_SOURCES})
+    target_compile_definitions(luna8_dev PRIVATE LUNA8_DEV)
+    
+    # Добавляем обе цели в список для общей настройки
+    list(APPEND TARGETS_TO_BUILD luna8_dev)
+else()
+    # Для Linux и Web просто собираем одну стандартную версию
+    add_executable(luna8 ${LUNA8_SOURCES})
 endif()
+
+# ==========================================
+# Общие настройки для ВСЕХ целей (и luna8, и luna8_dev)
+# ==========================================
+foreach(tgt ${TARGETS_TO_BUILD})
+    target_include_directories(${tgt} PRIVATE src)
+    target_link_libraries(${tgt} PRIVATE lua_static raylib)
+    target_compile_options(${tgt} PRIVATE -O3 -ffunction-sections -fdata-sections)
+
+    if(EMSCRIPTEN)
+        set_target_properties(${tgt} PROPERTIES OUTPUT_NAME "index")
+        target_link_options(${tgt} PRIVATE
+            -O3 -Wl,--gc-sections
+            -sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1
+            -sASYNCIFY -sASYNCIFY_STACK_SIZE=16384
+            -sASSERTIONS=0 -sMALLOC=emmalloc
+            "-sEXPORTED_RUNTIME_METHODS=['callMain']"
+            --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html
+        )
+    elseif(MINGW)
+        target_link_options(${tgt} PRIVATE
+            -Wl,--gc-sections -s
+            -static-libgcc -static-libstdc++
+        )
+    elseif(UNIX AND NOT EMSCRIPTEN)
+        target_link_options(${tgt} PRIVATE
+            -Wl,--gc-sections -s
+        )
+    endif()
+endforeach()

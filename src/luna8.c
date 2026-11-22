@@ -26,6 +26,24 @@ EM_JS(char*, luna8_fetch_sync, (const char* url), {
     stringToUTF8(text, ptr, len);
     return ptr;
 });
+#else
+/* ==========================================
+   CLI ИНТЕРФЕЙС (только для Native)
+   ========================================== */
+static void print_help(void) {
+    printf("LUNA-8: A tiny retro game framework for Lua.\n\n");
+    printf("USAGE: luna8 my_game.lua    Run a specific game file\n");
+    printf("USAGE: luna8                Run game.lua next to the luna8 executable\n\n");
+}
+
+static int file_exists(const char *path) {
+    FILE *f = fopen(path, "r");
+    if (f) {
+        fclose(f);
+        return 1;
+    }
+    return 0;
+}
 #endif
 
 /* Временный RGBA-буфер: сюда разворачиваем fb[] по палитре
@@ -76,22 +94,27 @@ static int build_default_script(char* buf, size_t buf_size) {
     return 0;
 }
 
-
 int main(int argc, char** argv) {
-    printf("LUNA-8: starting\n");
-
-    // палитра + fb ДО загрузки скрипта
-    luna8_api_init();
-
-    lua_State* L = luna8_script_create();
-    if (!L) {
-        fprintf(stderr, "[lua] cannot create state\n");
-        return 1;
-    }
-
-    const char* script;
+    const char* script = NULL;
     char default_script[2048];
 
+    // ==========================================
+    // ПЕРЕНАПРАВЛЕНИЕ ВЫВОДА В ФАЙЛ (для релиза)
+    // ==========================================
+#ifndef LUNA8_DEV
+    // Открываем файл luna8_log.txt и делаем его консолью
+    if (freopen("luna8_log.txt", "w", stdout) == NULL) {
+        // Если не удалось открыть файл (например, нет прав на запись),
+        // просто продолжаем работу без логов.
+    }
+    if (freopen("luna8_log.txt", "w", stderr) == NULL) {
+        // То же самое для ошибок
+    }
+#endif
+
+    // ==========================================
+    // 1. ПРОВЕРКА АРГУМЕНТОВ (ДО инициализации движка)
+    // ==========================================
     if (argc >= 2) {
         /* native: luna8.exe foo.lua
            wasm:   callMain(['/game.lua']) → argv[1] = "/game.lua" */
@@ -103,13 +126,27 @@ int main(int argc, char** argv) {
 #else
         if (build_default_script(default_script, sizeof(default_script)) != 0) {
             fprintf(stderr, "[LUNA-8] script path too long\n");
-            lua_close(L);
             return 1;
+        }
+        if (!file_exists(default_script)) {
+            print_help();
+            return 0;
         }
         script = default_script;
 #endif
     }
-    printf("LUNA-8: script = %s\n", script);
+
+    // ==========================================
+    // 2. ИНИЦИАЛИЗАЦИЯ ДВИЖКА
+    // ==========================================
+    // палитра + fb ДО загрузки скрипта
+    luna8_api_init();
+
+    lua_State* L = luna8_script_create();
+    if (!L) {
+        fprintf(stderr, "[LUNA-8] cannot create Lua state\n");
+        return 1;
+    }
 
     // загружаем save до скрипта
     luna8_save_open(script);
@@ -120,18 +157,22 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /* есть ли luna()? */
+    /* есть ли LUNA()? */
     lua_getglobal(L, "LUNA");
     int has_luna = lua_isfunction(L, -1);
     lua_pop(L, 1);
 
     if (!has_luna) {
-        printf("LUNA-8: no LUNA() in script, exiting.\n");
+        // Если LUNA() нет, значит это просто скрипт (например, тест или утилита).
+        // Топ-левел код уже выполнился, окно открывать не нужно.
         luna8_save_close();
         lua_close(L);
         return 0;
     }
 
+    // ==========================================
+    // 3. ИНИЦИАЛИЗАЦИЯ RAYLIB И ИГРОВОЙ ЦИКЛ
+    // ==========================================
     InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, WINDOW_TITLE);
 #ifndef __EMSCRIPTEN__
     SetWindowState(FLAG_WINDOW_RESIZABLE);
@@ -179,6 +220,9 @@ int main(int argc, char** argv) {
         EndDrawing();
     }
 
+    // ==========================================
+    // 4. ОЧИСТКА ПАМЯТИ
+    // ==========================================
     luna8_audio_close();
     lua_close(L);
     luna8_save_close();

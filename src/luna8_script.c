@@ -23,7 +23,7 @@ int luna8_msgh(lua_State *L) {
 
 void luna8_report_error(lua_State *L, const char* where) {
     const char* msg = lua_tostring(L, -1);
-    fprintf(stderr, "[lua] %s: %s\n", where, msg ? msg : "(non-string error)");
+    fprintf(stderr, "[LUNA-8] %s: %s\n", where, msg ? msg : "(non-string error)");
     lua_pop(L, 1);
 }
 
@@ -98,7 +98,7 @@ int luna8_script_call(lua_State *L, const char *name) {
     lua_pushcfunction(L, luna8_msgh);
     lua_insert(L, -2);
     if (lua_pcall(L, 0, 0, -2) != LUA_OK) {
-        luna8_report_error(L, "error in luna()");
+        luna8_report_error(L, "error in LUNA()");
         lua_pop(L, 1);      /* msgh */
         return 2;
     }
